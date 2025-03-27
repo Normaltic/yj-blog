@@ -1,12 +1,19 @@
 import Link from "next/link";
 
-function Postcard() {
+export interface PostcardProps {
+  title: string;
+  date: Date;
+  url: string;
+  summary?: string;
+}
+
+function Postcard({ title, date, url, summary }: PostcardProps) {
   return (
     <article>
-      <Link href="/">
-        <h4 className="text-3xl text-primary">Title</h4>
-        <i className="block mb-2 text-gray-400">2020-03-13</i>
-        <p>Description</p>
+      <Link href={url}>
+        <h4 className="text-3xl text-primary">{title}</h4>
+        <i className="block mb-2 text-gray-400">{date.toString()}</i>
+        {summary && <p>{summary}</p>}
       </Link>
     </article>
   );
