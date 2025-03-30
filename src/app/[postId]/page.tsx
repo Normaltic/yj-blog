@@ -3,9 +3,17 @@ import { notFound } from "next/navigation";
 import { lazy } from "react";
 
 import { formatDate } from "@/utils/date";
-import { getPost } from "@/utils/post";
+import { getPost, getPosts } from "@/utils/post";
 
 const PostViewer = lazy(() => import("../../components/post/PostMDXViewer"));
+
+export async function generateStaticParams() {
+  const posts = await getPosts();
+
+  const postParams = posts.map(({ path }) => ({ postId: path }));
+
+  return postParams;
+}
 
 export async function generateMetadata({
   params
