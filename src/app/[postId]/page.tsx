@@ -1,3 +1,4 @@
+import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { lazy } from "react";
 
@@ -5,6 +6,25 @@ import { formatDate } from "@/utils/date";
 import { getPost } from "@/utils/post";
 
 const PostViewer = lazy(() => import("../../components/post/PostMDXViewer"));
+
+export async function generateMetadata({
+  params
+}: {
+  params: Promise<{ postId: string | string[] }>;
+}): Promise<Metadata | undefined> {
+  const { postId } = await params;
+  const id = Array.isArray(postId) ? postId[0] : postId;
+
+  const source = await getPost(id);
+
+  if (!source) return undefined;
+  const { title, summary } = source.frontmatter;
+
+  return {
+    title: title,
+    description: summary
+  };
+}
 
 async function Page({
   params
