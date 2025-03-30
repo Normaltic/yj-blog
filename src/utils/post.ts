@@ -7,6 +7,7 @@ interface PostFrontmatter {
   title: string;
   date: string;
   summary?: string;
+  [key: string]: unknown;
 }
 
 export const POST_DIRECTORY_PATH = path.join(process.cwd(), "public/posts");
@@ -18,9 +19,14 @@ export async function getPosts() {
   const posts = await Promise.all(
     POST_PATHS.map(async (postPath) => {
       const source = fs.readFileSync(path.join(POST_DIRECTORY_PATH, postPath));
-      const md = await serialize(source, { parseFrontmatter: true });
+      const md = await serialize<Record<string, unknown>, PostFrontmatter>(
+        source,
+        {
+          parseFrontmatter: true
+        }
+      );
       return {
-        data: md.frontmatter as unknown as PostFrontmatter,
+        data: md.frontmatter,
         path: postPath.replace(/.mdx?$/, "")
       };
     })
@@ -36,7 +42,7 @@ export async function getPost(title: string) {
   const postFilePath = path.join(POST_DIRECTORY_PATH, postFileName);
   const source = fs.readFileSync(postFilePath);
 
-  const md = await serialize(source, {
+  const md = await serialize<Record<string, unknown>, PostFrontmatter>(source, {
     mdxOptions: {
       format: "md",
       remarkPlugins: [

@@ -16,7 +16,15 @@ async function Page({
 
   if (!source) return notFound();
 
-  return <PostViewer mdxSource={source} />;
+  const { title, date } = source.frontmatter;
+
+  return (
+    <article>
+      <h2 className="text-4xl text-center mt-8 mb-4">{title}</h2>
+      <p className="text-center mb-12">{date.toString()}</p>
+      <PostViewer mdxSource={source} />
+    </article>
+  );
 }
 
 export default Page;

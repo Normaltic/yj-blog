@@ -5,7 +5,7 @@ export default async function Home() {
   const result = await getPosts();
 
   return (
-    <div className="flex flex-col gap-8">
+    <section className="flex flex-col gap-8">
       {result.map(({ data, path }) => (
         <Postcard
           key={data.title}
@@ -15,6 +15,6 @@ export default async function Home() {
           summary={data.summary}
         />
       ))}
-    </div>
+    </section>
   );
 }

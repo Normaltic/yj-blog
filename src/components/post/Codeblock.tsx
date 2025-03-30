@@ -12,7 +12,7 @@ export const lineNumbers: Exclude<AnnotationHandler, undefined> = {
     return (
       <div className="flex align-top">
         <span
-          className="text-right pr-[1ch]"
+          className={`text-right pr-[2ch]`}
           style={{ minWidth: `${width}ch` }}
         >
           {props.lineNumber}
@@ -26,20 +26,16 @@ export const lineNumbers: Exclude<AnnotationHandler, undefined> = {
 const markHandler: Exclude<AnnotationHandler, undefined> = {
   name: "mark",
   Line: ({ annotation, ...props }) => {
-    if (annotation?.name !== "mark") {
-      return <InnerLine merge={props} />;
-    }
-    return (
-      <InnerLine
-        className="border-l-2 border-primary bg-primary/20"
-        merge={props}
-      />
-    );
+    const className =
+      annotation?.name === "mark"
+        ? "border-l-2 border-primary bg-primary/20"
+        : "";
+    return <InnerLine className={className} merge={props} />;
   }
 };
 
 function Codeblock({ codeblock }: CodeblockProps) {
-  return <Pre code={codeblock} handlers={[lineNumbers, markHandler]} />;
+  return <Pre code={codeblock} handlers={[markHandler, lineNumbers]} />;
 }
 
 export default Codeblock;

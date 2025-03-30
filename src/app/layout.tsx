@@ -20,10 +20,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${pretendard.className} linear-transition-color`}>
+      <body className={pretendard.className}>
         <header className="max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
-          <Link href="/" className="text-3xl">
-            Blog
+          <Link href="/">
+            <h1 className="text-4xl">Blog</h1>
           </Link>
         </header>
         <main className="max-w-4xl m-auto py-6 px-4">{children}</main>
