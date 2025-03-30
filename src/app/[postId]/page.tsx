@@ -1,6 +1,8 @@
-import { getPost } from "@/utils/post";
 import { notFound } from "next/navigation";
 import { lazy } from "react";
+
+import { formatDate } from "@/utils/date";
+import { getPost } from "@/utils/post";
 
 const PostViewer = lazy(() => import("../../components/post/PostMDXViewer"));
 
@@ -21,7 +23,7 @@ async function Page({
   return (
     <article>
       <h2 className="text-4xl text-center mt-8 mb-4">{title}</h2>
-      <p className="text-center mb-12">{date.toString()}</p>
+      <p className="text-center mb-12">{formatDate(new Date(date))}</p>
       <PostViewer mdxSource={source} />
     </article>
   );

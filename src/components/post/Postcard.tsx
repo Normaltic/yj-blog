@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { formatDate } from "@/utils/date";
+
 export interface PostcardProps {
   title: string;
   date: Date;
@@ -12,7 +14,7 @@ function Postcard({ title, date, url, summary }: PostcardProps) {
     <article>
       <Link href={url}>
         <h4 className="text-3xl text-primary">{title}</h4>
-        <i className="block mb-2 text-gray-400">{date.toString()}</i>
+        <i className="block mb-2 text-gray-400">{formatDate(date)}</i>
         {summary && <p>{summary}</p>}
       </Link>
     </article>
