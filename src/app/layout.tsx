@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 
+import ThemeWidget from "@/components/widget/ThemeWidget";
+import SyncThemeScript from "@/components/widget/SyncThemeScript";
+
 import "./globals.css";
 
 const pretendard = localFont({
@@ -21,6 +24,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <SyncThemeScript />
+      </head>
       <body
         className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
       >
@@ -30,6 +36,7 @@ export default function RootLayout({
           </Link>
         </header>
         <main className="max-w-4xl m-auto py-6 px-4">{children}</main>
+        <ThemeWidget className="fixed bottom-4 right-4" />
         <footer className="h-20" />
       </body>
     </html>
