@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import "./globals.css";
 import Link from "next/link";
+
+import "./globals.css";
 
 const pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
@@ -20,7 +21,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={pretendard.className}>
+      <body
+        className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
+      >
         <header className="max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
           <Link href="/">
             <h1 className="text-4xl">Blog</h1>
