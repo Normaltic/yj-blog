@@ -32,7 +32,16 @@ export async function getPosts() {
     })
   );
 
-  return posts;
+  const sort = posts.sort(
+    (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
+  );
+
+  const published =
+    process.env.NODE_ENV === "production"
+      ? sort.filter((post) => !post.path.match(/.draft$/))
+      : sort;
+
+  return published;
 }
 
 export async function getPost(title: string) {
