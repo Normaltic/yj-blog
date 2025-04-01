@@ -30,10 +30,15 @@ export default function RootLayout({
       <body
         className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
       >
-        <header className="max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
+        <header className="flex justify-between items-end max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
           <Link href="/">
             <h1 className="text-4xl">Blog</h1>
           </Link>
+          <div>
+            <Link href="/about">
+              <h2 className="text-xl">About</h2>
+            </Link>
+          </div>
         </header>
         <main className="max-w-4xl m-auto py-6 px-4">{children}</main>
         <ThemeWidget className="fixed bottom-4 right-4" />
