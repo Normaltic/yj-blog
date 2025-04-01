@@ -10,7 +10,7 @@ export interface ThemeWidgetProps {
 }
 
 function ThemeWidget({ className }: ThemeWidgetProps) {
-  const [, toggleTheme] = useToggleTheme();
+  const toggleTheme = useToggleTheme();
 
   return (
     <div

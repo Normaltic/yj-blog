@@ -7,7 +7,6 @@ import {
 const DANGEROUS_HTML = {
   __html: `
     ${isSystemDarkTheme}
-    ${isSettingDark}
     (${toggleDarkTheme})((${isSettingDark})());
   `
 };

@@ -1,26 +1,15 @@
 "use client";
 
-import {
-  isDocumentDarkTheme,
-  isSystemDarkTheme,
-  toggleDarkTheme
-} from "@/utils/theme";
-import { useCallback, useState } from "react";
+import { isDocumentDarkTheme, toggleDarkTheme } from "@/utils/theme";
+import { useCallback } from "react";
 
-export type ThemeString = "dark" | "light";
-
-function useToggleTheme(defaultValue?: ThemeString) {
-  const [current, setTheme] = useState<ThemeString>(
-    defaultValue ?? isSystemDarkTheme() ? "dark" : "light"
-  );
-
-  const toggle = useCallback((next?: ThemeString) => {
-    const isNextDark = (next && next === "dark") ?? !isDocumentDarkTheme();
+function useToggleTheme() {
+  const toggle = useCallback(() => {
+    const isNextDark = !isDocumentDarkTheme();
     toggleDarkTheme(isNextDark);
-    setTheme(isNextDark ? "dark" : "light");
   }, []);
 
-  return [current, toggle] as const;
+  return toggle;
 }
 
 export default useToggleTheme;

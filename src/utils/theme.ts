@@ -1,12 +1,8 @@
 export function isSystemDarkTheme() {
-  try {
-    return (
-      !!window.matchMedia &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches
-    );
-  } catch {
-    return false;
-  }
+  return (
+    !!window.matchMedia &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  );
 }
 
 export function isDocumentDarkTheme() {
