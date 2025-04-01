@@ -53,7 +53,7 @@ export async function getPost(title: string) {
 
   const md = await serialize<Record<string, unknown>, PostFrontmatter>(source, {
     mdxOptions: {
-      format: "md",
+      format: "mdx",
       remarkPlugins: [
         [
           remarkCodeHike,
