@@ -11,13 +11,29 @@ export interface PostMDXViewerProps {
   mdxSource: MDXRemoteSerializeResult;
 }
 
+function mergeClassNames(...args: string[]) {
+  return args.join(" ");
+}
+
 const COMPONENTS: Exclude<MDXRemoteProps["components"], undefined> = {
   Codeblock
 };
 
 function PostMDXViewer({ mdxSource }: PostMDXViewerProps) {
   return (
-    <div className="prose dark:prose-invert [&>*]:linear-transition-colors prose-code:linear-transition-colors prose-strong:linear-transition-colors prose-a:linear-transition-colors prose-li:marker:linear-transition-colors max-w-full prose-h3:text-3xl prose-pre:my-10 prose-blockquote:my-10 prose-blockquote:py-2 prose-blockquote:[&>p]:my-0 prose-img:my-10 prose-blockquote:border-primary prose-li:marker:text-foreground">
+    <div
+      className={mergeClassNames(
+        "prose dark:prose-invert",
+        "max-w-full",
+        "prose-pre:linear-transition-colors",
+        "prose-h3:text-3xl",
+        "prose-pre:my-10",
+        "prose-blockquote:my-10 prose-blockquote:py-2 prose-blockquote:[&>p]:my-0 prose-blockquote:border-primary",
+        "prose-img:my-10",
+        "prose-li:marker:text-foreground",
+        "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
+      )}
+    >
       <MDXRemote {...mdxSource} components={COMPONENTS} />
     </div>
   );
