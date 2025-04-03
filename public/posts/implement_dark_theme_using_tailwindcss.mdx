@@ -1,18 +1,18 @@
 ---
 title: TailwindCSS로 다크 테마 구현하기
 date: 2025-04-01 17:00:00
-summary: 다크 테마를 구현해보자
+summary: TailwindCSS@4로 다크 테마를 구현하면서 3버전과 비교해보기
 ---
 
-여러 사이트를 돌아다니다 보면, 다양한 사이트에서 다양한 방법으로 다크 테마가 구현되어 있다. 나도 최근에 이력서 페이지를 웹으로 개발하면서 다크 테마를 적용했다. 그래서 블로그에도 TailwindCSS를 활용해서 다크 테마를 적용하려고 했다.
+여러 사이트를 돌아다니다 보면 다양한 방법으로 다크 테마가 구현되어 있다. 나도 최근에 이력서 페이지를 웹으로 개발하면서 TailwindCSS를 활용해서 다크 테마를 적용했다. 그래서 블로그에도 다크 테마를 적용하려고 했다.
 
 그런데 이력서와 블로그 모두 `yarn create next-app` 을 사용해서 구현했는데, 그 사이에 패키지의 TailwindCSS 버전이 `3.4.1` 에서 `4` 로 올라가버렸다.
 
-그래서 `TailwindCSS@4` 기준으로 테마를 적용하면서, 중간중간 이전 버전과의 차이를 함께 정리해서 글로 정리하려 한다.
+그래서 `TailwindCSS@4` 기준으로 다크 테마를 적용하는 방법과 함께, 중간중간 이전 버전과의 차이를 정리해서 글로 정리하려 한다.
 
 ### TailwindCSS Dark Theme
 
-TailwindCSS에는 기본적으로 시스템의 설정이 다크 모드일 때, 스타일을 다르게 지정할 수 있는 `variant`가 정의되어 있다. 다크 모드에 대한 스타일을 설정하고 싶다면, `dark:` 뒤에 원하는 스타일을 추가하면 모드에 따라 스타일을 적용해준다.
+TailwindCSS에는 기본적으로 시스템의 설정이 다크 모드일 때, 스타일을 다르게 지정할 수 있는 `variant`가 정의되어 있다. 다크 모드에 대한 스타일을 설정하고 싶다면, `dark:` 뒤에 원하는 스타일을 작성하면 모드에 따라 스타일을 적용해준다.
 
 ```html
 <p className="text-black dark:text-white">Toggle color</p>
@@ -39,7 +39,7 @@ CSS 파일에서도 `prefers-color-scheme` 미디어 쿼리를 사용하면 다�
 }
 ```
 
-기본적으로 TailwindCSS는 미디어 쿼리를 사용하지만, 수동으로 전환하는 기능 역시 제공해준다.
+기본적으로 TailwindCSS는 미디어 쿼리를 사용하지만, 수동으로 전환할 수 있는 기능 역시 제공해준다.
 
 ```css
 @custom-variant dark (&:where(.dark, .dark *));
@@ -126,7 +126,7 @@ export default function RootLayout({
 <details>
   <summary>이전 버전에서는?</summary>
 
-이전 버전에서는 유틸리티 클래스가 없는 대신, `@layer`를 사용해서 선언하면 동일하게 작동한다. 간단한 경우 그냥 일반 클래스로 작성해줘도 된다.
+이전 버전에서는 유틸리티가 없는 대신, `@layer`를 사용해서 선언하면 동일하게 작동한다. 간단한 경우 그냥 일반 클래스로 작성해줘도 된다.
 
 ```css
 @layer utilities {
@@ -252,7 +252,7 @@ TailwindCSS에서는 다양한 기본 애니메이션을 제공해주지만, 원
 }
 ```
 
-그리고 `ThemeWidget` 컴포넌트의 각 `light`, `dark` 영역에 회전축을 중앙 아래로 설정하고 애니메이션을 적용했다.
+애니메이션을 작성하고, `ThemeWidget` 컴포넌트의 각 `light`, `dark` 영역의 회전축을 중앙 아래로 설정하고 애니메이션을 적용했다.
 
 ```tsx
 <div className="absolute w-12 h-12 flex justify-center items-center origin-[50%_100%] animate-rise dark:animate-set">
@@ -413,9 +413,9 @@ export default useToggleTheme;
 
 이 증상은 `useLayoutEffect`를 사용해도 조금 빠르게 전환될 뿐 깜빡거리는 것은 여전하다. [다크 모드 - 화면 깜빡임(FOUC) 이슈 해결 및 시스템 설정과 연동](https://bttrthn-ystrdy.tistory.com/95) 에서는 `useLayoutEffect`를 사용해서 깜빡거리는 증상은 해결됬다고 했는데, 나는 여전히 증상이 남아있었다. 이유는 정확히 파악하지 못했는데, 이력서든 블로그든 SSG로 생성되기 때문에, 미리 만들어진 화면을 보여주기 때문이라는 추측을 해본다.
 
-아무튼, 위 글에서도 언급하는데, 해당 증상은 Nextjs 코드가 실행되기 전(화면을 그리기 전)에 미리 처리한다면 해결할 수 있을 것으로 생각했다. 브라우저는 HTML 문서를 파싱하면서 스크립트 태그를 만나면 별다른 설정을 하지 않는 이상 파싱을 멈추고 스크립트부터 실행한다. 그러니 `body` 태그 이전, 화면을 그리기 전에 로직을 실행하면 될 것 같았다.
+아무튼, 위 글에서도 언급하는데, 해당 증상은 Nextjs 코드가 실행되기 전(화면을 그리기 전)에 미리 처리한다면 해결할 수 있을 것으로 생각했다. 브라우저는 HTML 문서를 파싱하면서 스크립트 태그를 만나면 별다른 설정을 하지 않는 이상 파싱을 멈추고 스크립트부터 실행한다. 그러니 화면을 그리기 전에 로직을 실행하면 될 것 같았다.
 
-Nextjs에서는 스크립트 태그를 위한 `Script` 컴포넌트를 지원해주는데, 아쉽게도 `head` 에 넣어주진 않는다. 그래서 `SyncThemeScript` 컴포넌트를 만들고 스크립트 태그를 직접 사용해 로직을 작성해줬다.
+따라서 스크립트 태그에 로직을 담아서 `head`에 삽입하기로 했다. Nextjs에서는 스크립트 태그를 위한 `Script` 컴포넌트를 지원해주는데, 아쉽게도 원하는대로 작동하지 않아 증상이 여전했고 태그를 `head` 에 넣어주진 않았다. 그래서 `SyncThemeScript` 컴포넌트를 만들고, 스크립트 태그를 직접 사용해 로직을 작성하고 삽입했다.
 
 ```tsx
 import { isSystemDarkTheme, toggleDarkTheme } from "@/utils/theme";
@@ -437,7 +437,7 @@ export default SyncThemeScript;
 
 함수의 `toString` 메서드는 함수의 내용을 그대로 문자열로 치환해준다. 이를 이용하면 문자열을 조합해 위의 방식으로 함수를 실행하는 스크립트 문자열을 만들 수 있다.
 
-이후 `layout.tsx`에 추가해서 스크립트 태그가 `head` 태그에 들어갈 수 있도록 작성했다. 그리고 체크 로직을 스크립트로 실행하기 때문에 `useToggleTheme` 내부의 `useEffect`는 필요 없어져서 지워주었다.
+이후 `layout.tsx`에 추가해서 스크립트 태그가 `head` 태그에 들어갈 수 있도록 작성했다. 그리고 체크 로직을 스크립트로 실행하기 때문에 `useToggleTheme` 내부의 `useEffect`는 필요 없어졌으므로 지워주었다.
 
 ```tsx
 <html>
@@ -448,11 +448,15 @@ export default SyncThemeScript;
 </html>
 ```
 
+> 처음에는 `head`에 넣어줘야 Nextjs 스크립트가 실행되기 전에 실행되서 의도한 대로 동작할 거라 생각했다. 다시 확인해 보니 `head`가 아닌 다른 위치에 스크립트 태그를 삽입해도 정상적으로 작동한다. 그러니 편한 곳에 놓으면 될 것 같다.
+
 작업을 마치고 새로고침을 하니 화면이 깜빡이는 문제 없이 정상적으로 시스템 테마를 따라가는 것을 확인할 수 있었다. 그리고 새로운 이슈를 마주하게 된다.
 
 ![사진 3) hydration_mismatch_error](../images/implement_dark_theme_using_tailwindcss/hydration_mismatch.png)
 
 이 에러는 `hydration mismatch`로, 서버에서 랜더링된 결과물과 클라이언트에서의 결과물이 다르다는 이야기이다. `hydration mismatch`에 대한 자세한 설명은 [공식 문서-hydration mismatch](https://nextjs.org/docs/messages/react-hydration-error)와 [React의 hydration mismatch](https://blog.hwahae.co.kr/all/tech/13604) 글을 참조하면 좋을 것 같다.
+
+> 다른 사이트에 동일한 작업을 진행했는데 오류가 발생하지 않았다. 다른 사이트는 Nextjs 버전이 달랐고 블로그의 버전은 Nextjs@15로, 15에서 hydration error가 개선되었다고 했는데 그것 때문에 발생한 것으로 추정된다.
 
 여기에서는 위의 스크립트가 브라우저에서 실행되면서 HTML 태그의 클래스를 변경시켰기 때문에 발생한 것이다. 하지만 화면이 깜빡이는 문제를 해결하기 위해서는 어쩔 수 없기 때문에, `suppressHydrationWarning` 을 HTML 태그에 추가해서 하이드레이션 경고를 끌 수 있어서 적용했다. 해당 옵션은 해당 태그에만 적용되고, 하위에서 발생할 경우 여전히 발생할 수 있다고 한다. 그래서 다른 원인으로 발생할 경우 에러가 재등장할 수 있다고 해서, 다른 곳에서 문제가 생겼을 때에는 알 수 있다는 것에 조금 안심하고 적용했다.
 
@@ -465,11 +469,11 @@ export default SyncThemeScript;
 </html>
 ```
 
-# 테마 설정값을 유지하기
+### 테마 설정값을 유지하기
 
 이제 접속 시 시스템 테마를 따라가는 것 까지 설정을 완료했다. 그러나 설정을 유지해주지는 않는다. 시스템 설정이 다크 모드여서 화이트 테마로 토글한 후 새로 고침을 하면 다크 테마로 돌아간다. 그래서 마지막으로 재접속시 테마를 토글한 적이 있다면, 마지막 상태를 적용하는 로직을 구현해보았다.
 
-설정값을 저장하는 곳으로는 `localStorage`가 적당할 것 같다. `theme.ts` 파일에 `localStorage`를 사용해 테마를 관리하는 로직을 추가했다.
+설정값을 저장하는 곳으로는 `localStorage`가 적당할 것 같았다. 그래서 `theme.ts` 파일에 `localStorage`를 사용해 테마를 관리하는 로직을 추가했다.
 
 ```ts
 export function isSettingDark() {
@@ -488,7 +492,7 @@ export function toggleDarkTheme(flag?: boolean) {
 }
 ```
 
-`localStorage`확인하고 값이 없다면 시스템 설정을 따라가게 하는 `isSettingDark` 함수를 정의하고, 원래 `isSystemDarkTheme` 함수가 하는 역할을 대신 하도록 했다. `toggleDarkTheme`은 다음 테마를 `localStorage`에 추가하도록 수정했다.
+`localStorage`확인하고 값이 없다면 시스템 설정을 따라가게 하는 `isSettingDark` 함수를 정의하고, 원래 `isSystemDarkTheme` 함수가 하는 역할을 대신 하도록 했다. `toggleDarkTheme`은 다음 테마를 `localStorage`에 저장하도록 수정했다.
 
 마지막으로, `SyncThemeScript` 의 HTML 컨텐츠를 수정해주었다. `isSystemDarkTheme` 대신 `isSettingDark` 가 실행되도록 변경하였다. 그리고 이 함수는 내부에서 `isSystemDarkTheme`를 사용하기 때문에, 참조할 수 있도록 내부에 추가했다.
 
@@ -507,7 +511,15 @@ const DANGEROUS_HTML = {
 };
 ```
 
-이를 통해, Nextjs에서 TailwindCSS를 활용해 다크 테마를 구현할 수 있게 되었다.
+이렇게 해서, Nextjs에서 TailwindCSS를 활용해 다크 테마를 구현할 수 있게 되었다.
+
+### 마치며
+
+Nextjs와 TailwindCSS를 학습할겸 이력서와 블로그를 개발하는 도중, 이력서의 테마를 블로그에 적용하는데 버전이 달라서 그 차이점을 비교해볼 겸 개발 과정을 정리해보았다. TailwindCSS 설정이 온전히 CSS파일 안으로 들어간 것 같은 느낌이라 더 사용이 편해진 것 같다.
+
+기존에 styled-components를 애용하다가 TailwindCSS를 사용해보는데, 처음에는 가독성 때문에 안좋아보였는데 생각보다 괜찮은 것 같다. 아직은 문서를 계속 찾아봐야 하지만, 익숙해지면 꽤 편하지 않을까 싶은 생각이 든다. styled-components 개발이 중단되었다고 하니 겸사겸사 많이 공부해야겠다.
+
+구현 코드는 [Blog repository](https://github.com/Normaltic/yj-blog)에서 볼 수 있다.
 
 ### 참고
 
