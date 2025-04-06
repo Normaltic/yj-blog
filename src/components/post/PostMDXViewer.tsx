@@ -31,7 +31,7 @@ function PostMDXViewer({ mdxSource }: PostMDXViewerProps) {
         "prose-pre:my-10",
         "prose-blockquote:my-10 prose-blockquote:py-2 prose-blockquote:[&>p]:my-0 prose-blockquote:border-primary",
         "prose-img:my-10",
-        "prose-li:marker:text-foreground",
+        "prose-li:marker:text-foreground [&_li>p]:mb-0",
         "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
       )}
     >
