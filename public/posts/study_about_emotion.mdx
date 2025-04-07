@@ -8,13 +8,13 @@ CSS-in-JS는 자바스크립트를 사용해서 스타일을 지정하는 방식
 
 그런데 최근에 styled-components 개발을 중단한다는 소식을 들었다( [Thank you.](https://opencollective.com/styled-components/updates/thank-you) ).
 
-글의 내용중에는 CSS-in-JS는 요즘 생태계에서 벗어나고 있으며, tailwind같은 다른 기술의 인기가 증가하고 있다고 한다. 하지만 댓글의 그래프를 보면 TailwindCSS의 인기가 증가하고 있지만 CSS-in-js가 완전히 대체되는 모습은 아니다.
+글의 내용중에는 CSS-in-JS는 요즘 생태계에서 벗어나고 있으며, TailwindCSS같은 다른 기술의 인기가 증가하고 있다고 한다. 하지만 댓글의 그래프를 보면 TailwindCSS의 인기가 증가하고 있지만 CSS-in-js가 완전히 대체되는 모습은 아니다.
 
 자주 사용하던 라이브러리가 개발이 중단되었다고 CSS-in-JS를 떠나보낼 수도 없고 다른 라이브러리도 있기 때문에, 새로운 기술을 배울겸 emotion에 대해 알아보면서 기존에 사용하던 styled-components와 무엇이 다른지 정리하고자 한다.
 
 ### CSS-in-JS
 
-기존의 CSS로 스타일을 작성하는 환경에서는, 기본적으로 CSS가 전역 범위를 가졌기 때문에 프로젝트가 커지면 클래스명이 충돌할 가능성이 높아졌다. 그래서 최대한 겹치지 않게 하는 것이 중요했다. 해당 문제들을 해결하기 위해서 BEM과 같은 네이밍 컨벤션이 등장하고, CSS Module 방법이 등장하기도 했다.
+기존의 CSS로 스타일을 작성하는 환경에서는, 기본적으로 CSS가 전역 범위를 가졌기 때문에 프로젝트가 커지면 클래스명이 충돌할 가능성이 높아졌다. 그래서 최대한 겹치지 않게 하는 것이 중요했다. 해당 문제를 해결하기 위해서 BEM과 같은 네이밍 컨벤션이 등장하고, CSS Module 방법이 등장하기도 했다.
 
 그러나 다른 문제도 있었는데, CSS는 미리 정의된 스타일을 사용해야 하므로 동적 스타일링을 하기 번거로웠다. 사용하는 모든 스타일을 클래스로 정의해두고 클래스 이름을 변경하거나, 인라인 스타일 혹은 `document.style` 을 조작하는 방법을 사용해야 했다.
 
@@ -98,7 +98,7 @@ const wrapper = css({
   '@media (min-width: 400px)': {
     ...
   }
-})
+});
 // or
 const wrapper = css`
   ...
@@ -122,12 +122,12 @@ const buttonStyle = css(
   {
     backgroundColor: 'yellow',
   }
-)
+);
 // or
 const buttonStyle = css`
   ${inputStyle};
   background-color: yellow;
-`
+`;
 ```
 
 이렇게 선언된 스타일들은 아래와 같이 태그의 `css`속성에 전달하는 것으로 적용할 수 있다.
@@ -144,7 +144,7 @@ function Input({ ... }) {
       css={inputStyle}
       ...
     />
-  )
+  );
 }
 ```
 
@@ -195,7 +195,7 @@ function Input({ color, ... }) {
         color: color,
       }}
     />
-  )
+  );
 }
 ```
 
@@ -207,7 +207,7 @@ function Input({ ... }) {
     <input
       css={[style1, style2]}
     />
-  )
+  );
 }
 ```
 
@@ -293,7 +293,7 @@ function Form({ ... }) {
       <Input />
     ...
   );
-};
+}
 ```
 
 당연하게도 기존에 `css`로 선언된 스타일을 재사용할 수 있다. `css`를 병합하는 방식과 동일하다.
@@ -327,7 +327,7 @@ const PrimaryButton = styled(Button)`
 ```tsx
 function Button({ className, ... }) {
   return <button className={className}>Button</button>
-};
+}
 
 const PrimaryButton = styled(Button)`
   ...
@@ -350,7 +350,7 @@ function SomeComponent({ ... }) {
       <Button as='div' />
     ...
   );
-};
+}
 ```
 
 `styled`로 이모션 컴포넌트를 선언할 때에는 `props`를 사용한다면 동적인 스타일을 적용할 수 있다.
@@ -366,7 +366,7 @@ const Button = styled.button<{ size: string }>`
 `;
 ```
 
-옵셔널한 속성의 경우에는 `defaultProps`을 사용하여 기본값을 설정할 수 있다.
+`props`속성의 경우에는 `defaultProps`을 사용하여 기본값을 설정할 수 있다.
 
 ```tsx
 const Button = styled.button<{ active?: boolean }>`
@@ -378,7 +378,7 @@ Button.defaultProps = {
 };
 ```
 
-`props`를 사용할 때, 원하지 않는 값이 DOM에 노출될 수 있다. 기본적으로 emotion은 유효한 모든 `props`를 전달하는데, 스타일에 사용되는 변수가 DOM에 노출될 수 있다.
+`props`를 사용할 때 원하지 않는 값이 DOM에 노출될 수 있다. 기본적으로 emotion은 유효한 모든 `props`를 전달하는데, 이 때문에 스타일에 사용되는 변수가 DOM에 노출될 수 있다.
 
 ```tsx
 const Button = styled.button<{ color: string }>`
@@ -392,7 +392,7 @@ function Form({ ... }) {
       <Button color='black'>Submit<Button>
     ...
   );
-};
+}
 ```
 
 이 경우 DOM에 다음과 같이 `color`속성이 노출될 수 있다.
@@ -544,7 +544,7 @@ function SomeComponent({ ... }) {
 
 ### @emotion/babel-plugin
 
-emotion은 추가적인 기능 제공 및 최적화를 위한 babel 플러그인을 지원한다. 사용하고 싶다면 `@emotion/babel-plugin`을 설치하고 babel 설정에 플러그인을 추가하면 된다.
+emotion은 추가적인 기능 제공 및 빌드 타임에 클래스를 생성하는 등의 최적화를 위한 babel 플러그인을 지원한다. 사용하고 싶다면 @emotion/babel-plugin을 설치하고 babel 설정에 플러그인을 추가하면 된다.
 
 ```bash
 yarn add --dev @emotion/babel-plugin
@@ -580,11 +580,11 @@ const Wrapper = styled.div`
   }
 `;
 // or
-const Wrapper = styled.div(
+const Wrapper = styled.div({
   [Button]: {
     ...
   }
-);
+});
 ```
 
 #### `autoLabel`
@@ -634,6 +634,317 @@ const PrimaryButton = styled.button`
 ```
 
 이 외에 `sourceMap`등의 옵션이 존재하며, [공식 문서 - @emotion/babel-plugin](https://emotion.sh/docs/@emotion/babel-plugin)문서에서 자세한 내용을 확인할 수 있다.
+
+### 우당탕탕 Nextjs에서 emotion 적용해보기
+
+글을 쓰는 현재 Nextjs를 공부하고 있어서, emotion 사용법에 이어 Nextjs에서 emotion을 사용하는 방법도 정리해보려고 알아보았다. emotion은 기본적으로 SSR을 지원해주지만 완벽하게 지원하지는 않는다고 한다. 런타임 기반의 CSS-in-JS 라이브러리라, SSR 환경에서는 페이지 로드 직후 화면이 깜빡이는 증상(FOUC)이 나타나거나, 서버사이드에서 랜더링 된 결과물과 달라지는 문제가 발생할 수 있어서 설정을 해주어야 한다고 한다.
+
+그런데 알아보면서 다양한 문제들이 있고, 정보가 뭔가 조금 파편화되어 있다는 느낌을 받았다. Nextjs버전에 따라 설정 방식이 다른 것 같고, Page Router와 Nextjs13버전에서 등장한 App Router의 설정도 다르고, App Router는 아직 지원을 잘 해주지 않는다는 글도 보았다. 공식 예제 [Nextjs - with emotion](https://github.com/vercel/next.js/tree/canary/examples/with-emotion) 에서도 Page router 기준으로 설명하고 있다. emotion도 버전에 따라 여러 방법이 있다는 것 같아서 문서를 봐도 혼란스러운 부분이 있다. 아마 CSS-in-JS의 특성상 런타임에 스타일을 처리하는 방식이 SSR과 완전히 맞지 않는 부분이 있어서 그런게 아닌가 추측된다.
+
+우선 다양한 이슈가 존재한다는 것만 인지하고, 이 글은 Nextjs@15, emotion@11 기준으로 직접 설정해보며, 설정하는 법을 정리해보려고 한다.
+
+> Nextjs는 12버전 부터 babel에서 SWC로 넘어갔다. babel 설정을 할 수는 있지만 SWC 컴파일이 비활성화되어, Nextjs에 대한 babel 설정을 직접 작성해주어야 한다고 한다. 대신, `next.config.ts`의 `compiler`옵션에서 @emotion/babel-plugin과 동일한 설정을 수행할 수 있다. [Nextjs - compiler/emotion](https://nextjs.org/docs/architecture/nextjs-compiler#emotion)
+
+[공식 문서 - SSR](https://emotion.sh/docs/ssr)에 따르면 SSR을 적용하는 데에 총 두 가지 접근 방식이 있다고 한다. 첫 번째 방식은 각 요소 위에 태그를 삽입하는 방식이고, 두 번째는 추가적인 설정을 해주는 방식이다. 그 중 첫 번째 방식이 기본적으로 적용되어 있다고 한다.
+
+#### Page Router
+
+일단 먼저 Page Router에서 emotion을 적용해보기 위해 `yarn create next-app` 을 실행해 Page Router 사용, TailwindCSS 미사용을 하고 프로젝트를 초기화한 후 필요한 라이브러리를 설치했다.
+
+```bash
+yarn create next-app
+yarn add @emotion/react @emotion/styled
+```
+
+그리고 아무런 설정을 하지 않고 이모션 컴포넌트를 선언하고 바로 출력을 시도해봤다.
+
+```tsx
+import styled from "@emotion/styled";
+
+export const Test = styled.div`
+  background-color: yellow;
+  color: black;
+`;
+```
+
+```tsx
+import Head from "next/head";
+
+import { Test } from "@/components/Test";
+
+export default function Home() {
+  return (
+    <>
+      <Head>
+        <title>Page router with emotion</title>
+      </Head>
+      <div>
+        <main>
+          <Test>Test</Test>
+        </main>
+      </div>
+    </>
+  );
+}
+```
+
+코드를 작성하고 실행해보았는데 이상 없이 작동하는것 같다. 첫 번째 방법이 자동으로 적용된 것이다. 추가적인 설정이 필요 없는걸까?
+
+다음으로 첫 번째 자식의 배경색을 검은색으로 적용하는 컴포넌트를 작성해 적용해보았다.
+
+```tsx
+export const FirstBlack = styled.div`
+  & > *:nth-child(1) {
+    background-color: black;
+  }
+`;
+```
+
+```tsx
+import { FirstBlack, Test } from "@/components/Test";
+
+
+export default function Home() {
+  return (
+    ...
+      <FirstBlack>
+        <Test>Test</Test>
+      </FirstBlack>
+    ...
+  );
+}
+```
+
+첫 번째 방식은 스타일을 적용하면 `style`태그가 `head`로 들어가지 않고 해당 태그의 바로 위에 삽입한다는 말이다. 그래서 `nth-child`같은 선택자가 정상적으로 작동하지 않을 수 있다고 한다.
+
+문서의 말대로라면, `Test` 컴포넌트의 위에 `style`태그가 들어가므로 `FirstBlack`의 선택자가 정상적으로 작동하지 않아야 한다. 코드를 작성하고 빌드를 한 후 실행시켜 확인해보았다.
+
+![사진 1) flicking~](../images/study_about_emotion/flicking_default_page_router.gif)
+
+실행 결과, 설명과는 조금 다르긴 한데 실제로 `style`태그가 위에 삽입되기는 한다. 그리고 곧바로 `head`태그로 이동하면서, 잠깐이나마 검정색 적용이 되지 않는것을 확인할 수 있었다. 그래서 새로 고침을 반복하면 깜빡인다.
+
+빌드를 하고 `.next/server/page/index.html`을 확인해보면, 실제로 해당 태그 위에 스타일이 삽입된 것을 확인할 수 있다. 클라이언트에서 랜더링될 때, 이를 수집하고 `head`로 이동하는 방식으로 보인다.
+
+![사진 2) 스타일과 같이 있는 태그](../images/study_about_emotion/style_tag_with_original.png)
+
+문서상에서는 선택자를 안 쓰면 문제될 것이 없다고 한다. 뭐, 안쓰면 되긴 한데 없으면 조금 불편하기도 하고, 해당 태그의 상단에 삽입하는것과 `head`로 이동하면서 DOM이 변경되는 것이 개인적으로 무언가 찝찝하다.
+
+두 번째 방법은 조금 복잡한데, 이해한대로라면 랜더링한 결과물에서 스타일 태그를 수집하고, html을 만들 때 `head`에 삽입하는 방식으로 보인다. Nextjs에서는 SSR을 사용하기 위해서는 `Document` 컴포넌트를 커스텀해서 스타일을 랜더링하고 `head`에 삽입하도록 만들면 된다고 하며 [Nextjs - with emotion](https://github.com/vercel/next.js/tree/canary/examples/with-emotion) 예제 링크를 걸어두었다.
+
+선택자 때문에 깜빡이는 것도 별로고 해서, 링크의 예제를 참고하면서 두 번째 방법을 사용해 SSR을 적용해보기로 했다.
+
+그런데, 가서 봤더니 `Document`가 없다.
+
+![사진 3) 텅 빈 레포지토리](../images/study_about_emotion/empty_box.png)
+
+혹시 최신 버전에서는 `Document` 설정을 안해도 되는건가? 싶어서 예제를 따라 `next.config.ts`를 수정하고, `_app.tsx`에 `CacheProvider`를 적용해 봤다.
+
+```tsx
+import createCache from "@emotion/cache";
+import { CacheProvider } from "@emotion/react";
+
+const key = "next";
+const cache = createCache({ key });
+
+export default function App({ Component, pageProps }: AppProps) {
+  return (
+    <CacheProvider value={cache}>
+      <Component {...pageProps} />
+    </CacheProvider>
+  );
+}
+```
+
+```ts
+const nextConfig: NextConfig = {
+  ...
+  compiler: {
+    emotion: true
+  }
+};
+```
+
+그러나 깜빡이는 증상은 여전히 남아있었다.
+
+그래서 구글링을 하며 Page Router에서 `Document`를 확장하는 방법에 대해 검색해보았고, 결국 `Document` 컴포넌트를 확장하는 코드를 [Implementing Next.js Emotions in Your Project](https://www.dhiwise.com/post/implementing-nextjs-emotions-in-your-project)글에서 찾을 수 있었다.
+
+이를 참고해서, `_document.tsx`의 `Document`컴포넌트를 아래와 같이 작성하였다.
+
+```tsx
+import createEmotionServer from "@emotion/server/create-instance";
+import { CacheProvider } from "@emotion/react";
+import createCache from "@emotion/cache";
+
+const key = "next";
+const cache = createCache({ key });
+const { extractCritical } = createEmotionServer(cache);
+
+export default class MyDocument extends Document {
+  static async getInitialProps(ctx: DocumentContext) {
+    const originalRenderPage = ctx.renderPage;
+
+    ctx.renderPage = () =>
+      originalRenderPage({
+        enhanceApp: (App) => (props) =>
+          (
+            <CacheProvider value={cache}>
+              <App {...props} />
+            </CacheProvider>
+          )
+      });
+
+    const initialProps = await Document.getInitialProps(ctx);
+    const styles = extractCritical(initialProps.html);
+
+    return {
+      ...initialProps,
+      styles: (
+        <>
+          {initialProps.styles}
+          <style
+            data-emotion={`${key} ${styles.ids.join(" ")}`}
+            dangerouslySetInnerHTML={{ __html: styles.css }}
+          />
+        </>
+      )
+    };
+  }
+
+  render() {
+    return (
+      <Html lang="en">
+        <Head />
+        <body>
+          <Main />
+          <NextScript />
+        </body>
+      </Html>
+    );
+  }
+}
+```
+
+코드를 해석해보면 다음과 같다. 해석은 [Nextjs - Custom Document](https://nextjs.org/docs/pages/building-your-application/routing/custom-document) 문서와 [공식 문서 - SSR](https://emotion.sh/docs/ssr)을 참고했다.
+
+1. emotion의 캐시를 생성하고 서버를 생성한다.
+2. `renderPage`를 오버라이딩해서 리액트 앱을 `CacheProvider`로 감싸고 캐시를 전달한다.
+3. 부모(원본 `Document`)의 `getInitialProps` 메서드를 통해 기존 `props`를 받아온다.
+4. `extractCritical`메서드를 통해 기존 html에서 emotion 스타일을 추출한다.
+5. emotion 스타일을 정리해서 스타일 태그로 만들어 반환한다.
+
+위 코드를 작성하고 나서, 기존에 공식 예제를 따라서 `_app.tsx`에 작성했던 `CacheProvider`를 제거하고 빌드 후 실행해보았다. 결과적으로는 깜빡이는 증상이 사라졌고, 위의 설정을 통해 CSS 선택자 사용에 대한 제약이 사라졌다.
+
+![사진 4) 스타일 없이 태그만](../images/study_about_emotion/no_style_tag_with_original.png)
+
+이렇게 해서, Page Router에서 SSR과 관련해 아무런 설정을 안해도 작동하는 첫 번째 방식과 두 번째 방식을 적용해보았다. 첫 번째는 별도의 설정은 필요 없으나 CSS 선택자에 대한 제약이 존재하고, 두 번째는 설정이 복잡하지만 CSS 선택자에 대한 제약이 없다. 단, 두 번째 방식의 경우에는 스트리밍 API에서는 정상적으로 작동하지 않는다고 한다.
+
+그런데 어디에서는 첫 번째 방법으로도 SSR을 잘 지원한다고 하고, 또 다른 곳에서는 추가적인 설정을 해주어야 한다고 한다. 참고한 문서에서도 해당 방식을 적용할 경우 SSR을 잘 지원한다고 언급하고 있다.
+
+결국, 스트리밍 API 지원 여부와 CSS 선택자 사용 유무에 따라서 적절한 방식을 적용해주면 될 것 같다.
+
+#### App Router
+
+다음으로 App Router에서 emotion을 적용해보기 위해 `yarn create next-app` 을 실행해 App Router 사용, TailwindCSS 미사용을 하고 프로젝트를 초기화한 후 Page Router때와 동일한 작업을 했다.
+
+그리고 첫 번째 방법을 사용하기 이해 아무런 설정을 하지 않고 Page Router와 동일한 이모션 컴포넌트를 선언하고 출력을 시도해보았다.
+
+```tsx
+import { Test, FirstBlack } from "@/components/Test";
+
+export default function Home() {
+  return (
+    <div>
+      <main>
+        <FirstBlack>
+          <Test>Test</Test>
+        </FirstBlack>
+      </main>
+    </div>
+  );
+}
+```
+
+바로 에러가 발생했다.
+
+![사진 5) createContext Error](../images/study_about_emotion/create_context_error.png)
+
+해당 에러는 `React.Context` 관련 에러로, 이를 사옹하기 위해서는 "use client" 를 작성해서 클라이언트 컴포넌트임을 명시해주어야 한다고 한다. 그래서 스타일을 선언한 파일에 "use client" 를 작성해주면 작동하긴 한다.
+
+```tsx
+"use client";
+import styled from "@emotion/styled";
+...
+```
+
+그러나 이전 Page Router에서 첫 번째 방법을 적용했을 때와 동일하게 깜빡이는 증상이 발생한다. 그리고 이렇게 하면 스타일을 선언한 모든 파일에 "use client"를 해야 한다는건데, 스타일이 적용된 모든 컴포넌트가 클라이언트 컴포넌트가 되버린다. App Router 역시 두 번째 방법을 선택해야 할 것 같다고 생각했다. 그러나 App Router에는 `_document` 문서가 없다. 그러면 어떻게 해야할까?
+
+[Nextjs - css-in-js](https://nextjs.org/docs/app/building-your-application/styling/css-in-js)에 나와있는 목록에서는, emotion의 경우 `app` 디랙토리에 대해 아직 지원을 위한 작업중이라고 나와있다. 문서의 다른 항목을 보니, 다른 라이브러리의 경우 `useServerInsertedHTML`을 활용해서 구현하고 있는 듯 하다. 하지만 emotion의 문서를 아무리 뒤져봐도, 관련한 내용을 찾을 수 없다. emotion 레포지토리의 이슈에는 [Plans to support Next.js 13 - /app directory](https://github.com/emotion-js/emotion/issues/2928)가 22년부터 등록되어 있고, 아직 **열려있는 상태**다. 즉, **emotion은 아직 App Router를 잘 지원하지 않는다**는 뜻으로 볼 수 있다.
+
+그러면 emotion이 아직 지원을 해주지 않으므로, Nextjs에서 emotion을 사용하기 위해서는 기능을 직접 구현하는 것 외에는 방법이 없나?
+
+열심히 구글링 해보던 도중, emotion 레포지토리의 이슈 중 [Make it easyer to integrate with Next.js](https://github.com/emotion-js/emotion/issues/3054) 를 찾을 수 있었다. emotion에서 App Router와 Page Router가 함께 작동하도록 구성하는것은 복잡할 수 있는데 tss-react에서 이를 쉽게 할 수 있는 도구를 제공하고 있고, emotion에서 관련 기능을 직접 제공하길 바란다는 내용이다. 그러니까, tss-react를 사용한다면 App Router에서 SSR 설정을 쉽게 할 수 있다는 말이다. 실제 이슈에서 첨부한 사진을 보면, App Router는 물론 Page Router도 쉽게 설정하는것을 볼 수 있다.
+
+tss-react는 emotion 기반의 type-safe한 스타일 라이브러리로, MUI와의 통합을 염두해두고 만들어졌다고 한다. 하지만 MUI 없이도 emotion의 대체제로 사용이 가능하고, SSR 대응이 가능하다고 한다. 단, 서버 컴포넌트를 지원하지 않기 때문에 **클라이언트 컴포넌트를 권장**한다. 자세한 설명은 [tss-react 공식 문서](https://www.tss-react.dev/)에 작성되어 있다. 아무튼, 해당 라이브러리에서 App Router를 위한 emotion 설정만 적용하면 일단 사용은 가능할 것 같다.
+
+바로 한번 시도해보았다.
+
+```bash
+yar add tss-react
+```
+
+그리고 다음과 같이 `layout.tsx`를 수정해 SSR 설정 컴포넌트를 적용했다.
+
+```tsx
+import { NextAppDirEmotionCacheProvider } from "tss-react/next/appDir";
+
+export default function RootLayout({
+  children
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
+  return (
+    <html>
+      <body>
+        <NextAppDirEmotionCacheProvider options={{ key: "css" }}>
+          {children}
+        </NextAppDirEmotionCacheProvider>
+      </body>
+    </html>
+  );
+}
+```
+
+그냥 `tes-react/next`에서 가져오면 `module-not-found` 에러가 발생한다. 그래서 정확한 경로를 명시해서 가져와야 한다.
+
+설정을 마치고 빌드를 한 후 실행해본 결과 깜빡이는 증상이 사라졌다. 빌드 과정에서 스타일을 추출하여, `head`태그에 정상적으로 삽입한다는 뜻이다. `.next/server/app/index.html` 을 확인해보면 style 태그가 사라진 것을 볼 수 있다.
+
+![사진 6) 스타일 없이 태그만2](../images/study_about_emotion/no_style_tag_with_original2.png)
+
+[tss-react/src/next/appDir.tsx](https://github.com/garronej/tss-react/blob/main/src/next/appDir.tsx)의 코드를 간단히 분석해보았다.
+
+1. 캐시를 생성해 클로저를 활용해 삽입된 목록을 직접 관리하고, `insert`, `flush` 함수를 구현해서 반환한다.
+2. `useServerInsertedHTML`에서 캐시를 비우고 값을 가져와 스타일을 조합해 스타일 태그를 생성해 반환한다.
+3. `CacheProvider`로 자식 컴포넌트를 감싼다.
+
+코드의 구조는 다르지만, Page Router 때 처럼 스타일을 추출해서 태그를 생성해 반환하는 흐름은 동일한 것 같다.
+
+이렇게 해서, 하나는 라이브러리를 추가해서 쓰기는 했으나, App Router에서도 SSR과 관련한 두 가지 설정을 적용해 보았다. 첫 번째 방식과 두 번째 방식 모두 "use client"를 명시해주어야 해서 완전히 지윈하지는 않는다고 생각한다. 그리고 첫 번째 방식은 역시 CSS 선택자를 사용하는 데에 문제가 있고, 두 번째 방식은 직접 구현하거나 외부 라이브러리 의존성을 추가해주어야 한다.
+
+어차피 두 가지 방식 모두 서버 컴포넌트를 지원해주지 않으므로, CSS 선택자 사용 유무에 따라서 선택하면 될 것 같다.
+
+#### Nextjs에서 emotion
+
+Nextjs에서 emotion이 접근하는 두 가지 방법에 대해 Page Router와 App Router에서 각각 적용해 보았다.
+
+Page Router에서는 별도의 설정이 필요 없으나, 스타일 태그가 각 요소 바로 위에 삽입되기 때문에 CSS 선택자 사용에 제약이 존재했다. 이를 해결하기 위한 방법으로는 `_document.tsx`를 커스텀하여 스타일을 추출해 `head`에 삽입하는 방식으로 적용할 수 있었다. 하지만 이 경우 선택자 문제나 깜빡임 현상은 해결되지만, 추가적인 설정이 필요했고 스트리밍 랜더링에는 정상적으로 작동하지 않는다고 한다.
+
+App Router에서도 기본적으로 emotion을 사용할 수 있었으나 동일한 제약이 있었고, 추가적으로 스타일을 선언한 파일에 "use client"를 명시해야 했다. 또한 App Routerdpsms `_document.tsx`가 존재하지 않기 때문에, 앞서 Page Router에서 사용했던 방식은 적용이 어려웠다. 이것의 대안으로는 tss-react를 사용해서 설정하는 방식이 있었는데, 서버 컴포넌트를 지원되지 않아서 스타일을 선언한 모든 파일에 "use client"를 명시해 클라이언트 컴포넌트를 사용해야 했다.
+
+정리하자면 Page Router의 경우에는 공식 문서를 통해 어느 정도 가이드를 제공하고 있었고 지원을 해주는 것 처럼 보여졌다. 반면 App Router의 경우에는 Nextjs 공식 문서 기준으로 아직 완전히 지원되지 않으며, 관련 이슈도 열려있는 상태임을 확인할 수 있었다. 다양한 문서들을 보면, CSS-in-JS 특성상 서버 컴포넌트를 지원하기 어렵다는 지적이 있었고, 다른 대안을 고려할 것을 권장하는 내용들이 보였다.
+
+> Nextjs 공식 문서 : "If you want to style Server Components, we recommend using CSS Modules or other solutions that output CSS files, like PostCSS or Tailwind CSS."
+
+따라서 Nextjs에서 emotion을 사용하는 것에는 어느 정도의 제약 사항들이 존재한다는 것을 인지하고, 상황에 따라 적절한 방식을 선택하는 것이 필요하다고 느껴졌다.
 
 ### emotion과 styled-components
 
@@ -695,9 +1006,63 @@ const GlobalStyle = createGlobalStyle`
 
 트랜드는 다른걸 찾을 필요 없이 글의 처음에 언급한 [Thank you.](https://opencollective.com/styled-components/updates/thank-you)의 코멘트에 달린 그래프를 보면 될 것 같다. 2023년 이후로 emotion가 추월했고, 2024년에는 emotion은 살짝 올라갔으나 styled-components는 유지되었고, 2025년에는 둘 다 상승세를 보이긴 했다. 그러나 styled-components는 개발 중단 소식 이후로 아마 하향세를 타지 않을까 싶다.
 
+차이점에 대해서 정리하면 다음과 같다.
+
+- **타입스크립트 지원**
+
+  - styled-components: 타입 분리, `@types/styled-components` 추가 설치 필요
+  - emotion: 타입 내장, 별도 설치 없이 바로 사용 가능
+
+- **초기 설정**
+
+  - styled-components: 별도 설정 없이 바로 사용 가능
+  - emotion: `css` prop 사용 시 Babel 설정 또는 `jsx-pragma` 필요 (`styled`만 사용 시에는 설정 불필요)
+
+- **스타일 선언 방식**
+
+  - styled-components: 템플릿 리터럴 사용 (`styled`, `css`, `keyframes` 등)
+  - emotion: 동일하게 사용 가능 + 인라인 스타일 객체도 지원
+
+- **스타일 적용 방식**
+
+  - styled-components: 선언한 컴포넌트 사용
+  - emotion: 선언한 컴포넌트 사용 + 태그의 `css`속성에 직접 전달 가능
+
+- **스타일 확장**
+
+  - styled-components: `css` 조합 가능 + `styled(SomeComponent)` 방식으로 확장 가능
+  - Emotion: 동일하게 확장 가능
+
+- **컴포넌트 셀렉터**
+
+  - styled-components: 기본적으로 지원
+  - Emotion: `@emotion/babel-plugin` 설치 필요
+
+- **기본 Props 설정**
+
+  - styled-components: `.attrs()`로 props 기반 동적 설정 가능
+  - Emotion: `defaultProps`만 지원 (props 기반 동적 설정은 불가)
+
+- **Prop 전달 제어**
+
+  - styled-components: 제한적 (대부분의 props가 DOM에 전달됨)
+  - Emotion: `shouldForwardProp`으로 세밀한 제어 가능
+
+- **테마 설정**
+
+  - styled-components: `ThemeProvider`, `useTheme`, 타입 확장 등 지원
+  - Emotion: 거의 동일하게 지원
+
+- **전역 스타일**
+
+  - styled-components: `createGlobalStyle`로 컴포넌트처럼 선언
+  - Emotion: ` <Global styles={css``} /> ` 형태로 사용
+
 ### 마치며
 
-emotion을 알아보면서 styled-components와 비교를 해봤는데, 생각보다 많은 부분이 비슷했고 거의 동일한 부분도 있다고 느꼈다. `styled`의 경우 styled-components의 영감을 많이 받았다고 하니 당연한 걸 수도 있다. 조금 더 공부해봐야 되겠지만 아마 사용하는 데에는 큰 지장이 없을 것 같다. [공식 문서 - Best practice](https://emotion.sh/docs/best-practices)에서 사용에 대한 권장 사항들이 있기 때문에 참고하면서 사용하면 될 것 같다. `styled`와 `css`속성 둘 중 하나만 사용하는 것을 권장하는데, 익숙한 `styled`가 마음에 든다.
+emotion을 알아보면서 styled-components와 비교를 해봤는데, 생각보다 많은 부분이 비슷했고 거의 동일한 부분도 있다고 느꼈다. `styled`의 경우 styled-components의 영감을 많이 받았다고 하니 당연한 걸 수도 있다. 실제로 작업하다 그만둔 토이 프로젝트에서 styled-components를 emotion으로 변경해봤는데 별 문제가 없었다. 조금 더 공부해봐야 되겠지만 아마 사용하는 데에는 큰 지장이 없을 것 같다. [공식 문서 - Best practice](https://emotion.sh/docs/best-practices)에서 사용에 대한 권장 사항들이 있기 때문에 참고하면서 사용하면 될 것 같다. `styled`와 `css`속성 둘 중 하나만 사용하는 것을 권장하는데, 익숙한 `styled`가 마음에 든다.
+
+Nextjs 설정의 경우에는 직접 실행해보면서 작성해보였다. 코드는 [nextjs-emotion-setting-test](https://github.com/Normaltic/nextjs-emotion-setting-test)에서 확인할 수 있다. Nextjs를 아직 공부하고 있어서 그런지 Nextjs와 관련된 설명이 조금은 미흡한 것 같다. 나중에 Nextjs에 익숙해지고 나서 기회가 된다면 Nextjs쪽 글을 보충해야겠다.
 
 웹 개발을 하면서 개인적으로 쉽고 빠르게 개발할 수 있다고 느껴서 styled-components를 애용해왔는데, 개발이 중단된다는 소식을 듣고 뭔가 조금 아쉽다는 생각이 들었다. 뭐, 그래도 새로운 기술을 접해보는 계기가 됬다고 생각할 수도 있겠다.
 
@@ -710,12 +1075,17 @@ emotion을 알아보면서 styled-components와 비교를 해봤는데, 생각�
 ### 참고
 
 - [Thank you.](https://opencollective.com/styled-components/updates/thank-you)
-- [emotion 공식 홈페이지](https://emotion.sh/docs/introduction)
-- [Emotion CSS prop 사용 설정하기](https://junglast.com/blog/react-new-jsx-transform-emotion)
+- [emotion 공식 문서](https://emotion.sh/docs/introduction)
+- [Nextjs 공식 문서](https://nextjs.org/docs)
+- [tss-react 공식 문서](https://www.tss-react.dev/)
 - [Emotion 소개 및 사용하기](https://velog.io/@favorcho/Emotion-소개-및-사용하기)
+- [Emotion CSS prop 사용 설정하기](https://junglast.com/blog/react-new-jsx-transform-emotion)
+- [Implementing Next.js Emotions in Your Project](https://www.dhiwise.com/post/implementing-nextjs-emotions-in-your-project)
+- [Plans to support Next.js 13 - /app directory](https://github.com/emotion-js/emotion/issues/2928)
+- [Make it easyer to integrate with Next.js](https://github.com/emotion-js/emotion/issues/3054)
 - [Stitches - Benchmarks](https://stitches.dev/docs/benchmarks)
 
-#### 기타 참고하면 좋을 것
+#### 참고하면 좋을 것
 
 - [Emotion이 CSS를 생성하는 방법](https://mitchell-up.github.io/mitchell-dictionary/blog/emotion/emotion-mechanism/)
 - [css-in-js 라이브러리 코드로 파악해보는 css-in-js의 이모저모](https://ideveloper2.dev/blog/2022-01-25--emotion으로-파악해보는-css-in-js의-이모저모/)
