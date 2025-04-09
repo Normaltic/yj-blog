@@ -154,7 +154,7 @@ function Input({ ... }) {
 
 babel 설정을 직접 수정할 수 있다면 아래와 같이 적용하면 된다. CRA(참고로 `deprecated` 되었다)에서는 `eject`를 하거나, craco등을 사용해 수정해야 한다.
 
-```json
+```json .babelrc
 {
   "presets": [
     [
@@ -173,7 +173,7 @@ babel 설정을 직접 수정할 수 있다면 아래와 같이 적용하면 된
 
 만약 타입스크립트를 사용하고 있다면, 타입스크립트 컴파일러에게도 마찬가지로 알려줘야 한다. `tsconfig.json`에 추가적인 설정을 해야한다.
 
-```json
+```json tsconfig.json
 {
   "compileOptions": {
     ...
@@ -436,7 +436,7 @@ export default defaultStyle;
 
 우선 `css`로 스타일을 선언하고, 선언된 스타일을 `Global` 컴포넌트의 `styles`속성으로 전달하면 스타일을 전역적으로 삽입한다. `css`속성의 명세와 동일하고, 마찬가지로 인라인 스타일 객체를 직접 받을수도 있다.
 
-```tsx
+```tsx index.tsx
 root.render(
   <React.StrictMode>
     ...
@@ -450,7 +450,7 @@ root.render(
 
 테마는 `ThemeProvider`를 사용해서 설정할 수 있다. 테마를 정의해 두고 `ThemeProvider`를 앱 최상단에 추가해 테마를 전달하면, 여러 방식으로 접근해서 사용할 수 있다.
 
-```tsx
+```tsx App.tsx
 const theme = {
   color: {
     primary: "#379ad3"
@@ -550,7 +550,7 @@ emotion은 추가적인 기능 제공 및 빌드 타임에 클래스를 생성�
 yarn add --dev @emotion/babel-plugin
 ```
 
-```json
+```json .babelrc
 {
   "plugins": [
     ...
@@ -658,7 +658,7 @@ yarn add @emotion/react @emotion/styled
 
 그리고 아무런 설정을 하지 않고 이모션 컴포넌트를 선언하고 바로 출력을 시도해봤다.
 
-```tsx
+```tsx Test.tsx
 import styled from "@emotion/styled";
 
 export const Test = styled.div`
@@ -667,7 +667,7 @@ export const Test = styled.div`
 `;
 ```
 
-```tsx
+```tsx index.tsx
 import Head from "next/head";
 
 import { Test } from "@/components/Test";
@@ -692,7 +692,7 @@ export default function Home() {
 
 다음으로 첫 번째 자식의 배경색을 검은색으로 적용하는 컴포넌트를 작성해 적용해보았다.
 
-```tsx
+```tsx Test.tsx
 export const FirstBlack = styled.div`
   & > *:nth-child(1) {
     background-color: black;
@@ -700,7 +700,7 @@ export const FirstBlack = styled.div`
 `;
 ```
 
-```tsx
+```tsx index.tsx
 import { FirstBlack, Test } from "@/components/Test";
 
 
@@ -739,7 +739,7 @@ export default function Home() {
 
 혹시 최신 버전에서는 `Document` 설정을 안해도 되는건가? 싶어서 예제를 따라 `next.config.ts`를 수정하고, `_app.tsx`에 `CacheProvider`를 적용해 봤다.
 
-```tsx
+```tsx _app.tsx
 import createCache from "@emotion/cache";
 import { CacheProvider } from "@emotion/react";
 
@@ -755,7 +755,7 @@ export default function App({ Component, pageProps }: AppProps) {
 }
 ```
 
-```ts
+```ts next.config.ts
 const nextConfig: NextConfig = {
   ...
   compiler: {
@@ -770,7 +770,7 @@ const nextConfig: NextConfig = {
 
 이를 참고해서, `_document.tsx`의 `Document`컴포넌트를 아래와 같이 작성하였다.
 
-```tsx
+```tsx _document.tsx
 import createEmotionServer from "@emotion/server/create-instance";
 import { CacheProvider } from "@emotion/react";
 import createCache from "@emotion/cache";
@@ -848,7 +848,7 @@ export default class MyDocument extends Document {
 
 그리고 첫 번째 방법을 사용하기 이해 아무런 설정을 하지 않고 Page Router와 동일한 이모션 컴포넌트를 선언하고 출력을 시도해보았다.
 
-```tsx
+```tsx page.tsx
 import { Test, FirstBlack } from "@/components/Test";
 
 export default function Home() {
@@ -870,7 +870,7 @@ export default function Home() {
 
 해당 에러는 `React.Context` 관련 에러로, 이를 사옹하기 위해서는 "use client" 를 작성해서 클라이언트 컴포넌트임을 명시해주어야 한다고 한다. 그래서 스타일을 선언한 파일에 "use client" 를 작성해주면 작동하긴 한다.
 
-```tsx
+```tsx Test.tsx
 "use client";
 import styled from "@emotion/styled";
 ...
@@ -894,7 +894,7 @@ yar add tss-react
 
 그리고 다음과 같이 `layout.tsx`를 수정해 SSR 설정 컴포넌트를 적용했다.
 
-```tsx
+```tsx layout.tsx
 import { NextAppDirEmotionCacheProvider } from "tss-react/next/appDir";
 
 export default function RootLayout({

@@ -20,7 +20,7 @@ TailwindCSS에는 기본적으로 시스템의 설정이 다크 모드일 때, �
 
 CSS 파일에서도 `prefers-color-scheme` 미디어 쿼리를 사용하면 다크 모드에 대한 스타일을 별도로 정의할 수 있다. Nextjs 프로젝트를 초기화하면 `globals.css`에 모드별 변수를 정의해둔 것을 볼 수 있다.
 
-```css
+```css globals.css
 :root {
   --background: #ffffff;
   --foreground: #171717;
@@ -60,7 +60,7 @@ CSS 파일에서도 `prefers-color-scheme` 미디어 쿼리를 사용하면 다�
 
 이전 버전의 경우에는 `tailwind.config.ts`를 통해서 TailwindCSS의 설정을 관리할 수 있다. 테마의 경우 `@theme` 대신 해당 파일 내부에서 테마를 확장하는 방식으로 설정할 수 있다. 그리고 설정의 `darkMode` 속성에 `selector` 값을 할당하면 클래스 제어로 전환할 수 있고, 기본값은 `media`이다. 이력서 페이지를 만들 때에는 `class`를 적용했었는데, 문서에 따르면 `3.4.1` 버전 이후로는 `class`가 `selector`로 대체되었다고 한다.
 
-```js
+```js tailwind.config.ts
   // !mark(2)
   export default {
     darkMode: 'selector',
@@ -84,7 +84,7 @@ CSS 파일에서도 `prefers-color-scheme` 미디어 쿼리를 사용하면 다�
 
 우선, `globals.css`의 내용을 미디어 대신 클래스를 참조하도록 수정했다. 그리고 텍스트와 배경색이 변경될 때 트랜지션을 주고싶어서 유틸리티 클래스도 작성했다. 일반 클래스로 선언해도 됬지만, 유틸리티로 추가할 경우 자동 완성을 지원해준다(VSCode에 Tailwind CSS IntelliSense를 설치한 기준). 유틸리티는 다양한 `variant`를 자동으로 지원해주고, 설명은 [ADDING CUSTOM UTILITIES](https://tailwindcss.com/docs/adding-custom-styles#adding-custom-utilities)에 잘 되어 있다.
 
-```css
+```css globals.css
 :root {
   --background: #ffffff;
   --foreground: #212529;
@@ -106,7 +106,7 @@ CSS 파일에서도 `prefers-color-scheme` 미디어 쿼리를 사용하면 다�
 
 설정한 색상과 유틸리티를 `body`태그에 적용했다.
 
-```tsx
+```tsx layout.tsx
 export default function RootLayout({
   children
 }: Readonly<{
@@ -140,7 +140,7 @@ export default function RootLayout({
 
 하지만 이 방법의 경우 자동 완성을 지원해주지는 않는다. 자동 완성을 지원받고 싶은 경우에는 TailwindCSS 설정에 플러그인을 추가하는 방식으로 사용한다면 가능하다.
 
-```ts
+```ts tailwind.config.ts
 import plugin from 'tailwindcss/plugin';
 
 export default {
@@ -164,7 +164,7 @@ export default {
 
 다음으로 토글하는 로직을 구현하기 위해 `useToggleTheme` 훅을 작성했다. 함수를 호출하면 HTML 태그의 클래스 목록에 `dark`가 있는지 체크한 후 목록에서 토글하도록 했다.
 
-```tsx
+```tsx useToggleTheme.tsx
 "use client";
 
 import { useCallback, useState } from "react";
@@ -183,7 +183,7 @@ export default useToggleTheme;
 
 그리고 `ThemeWidget` 컴포넌트를 작성해서 기본적인 디자인과 기능을 구현했다. 라이트 테마일 때에는 `light` 텍스트가, 다크 테마일 때에는 `dark`가 출력되도록 했다.
 
-```tsx
+```tsx ThemeWidget.tsx
 "use client";
 
 import useToggleTheme from "@/hooks/useToggleTheme";
@@ -268,7 +268,7 @@ TailwindCSS에서는 다양한 기본 애니메이션을 제공해주지만, 원
 
 기본 클래스로는 `dark:` `variant`가 적용되지 않기 때문에, 이번에는 `@layer` 를 사용해야만 한다. 하지만 역시 자동 완성은 지원되지 않는다. 자동 완성을 지원받고 싶은 경우에는 TailwindCSS 설정에서 테마를 확장하는 방식으로 사용한다면 가능하다.
 
-```ts
+```ts tailwind.config.ts
 export default {
   ...
   theme: {
@@ -309,7 +309,7 @@ export default {
 
 다음으로 아이콘을 추가하려는데, 아이콘으로 SVG를 사용하고 싶었다. React에서 SVG를 쓰는 방법은 다양하지만, 나는 컴포넌트로 직접 선언하는 것 보다 SVG파일을 컴포넌트로 import 해서 사용하는 것을 선호한다. 그래서 `@svgr/webpack` 의존성을 추가하고, `next.config.ts`를 아래와 같이 수정했다.
 
-```ts
+```ts next.config.ts
 const nextConfig: NextConfig = {
   ...
   webpack(config) {
@@ -357,7 +357,7 @@ window.matchMedia("(prefers-color-scheme: dark)").matches; // true | false;
 
 우선 테마 관련 로직을 별도로 관리하기 위해 `utils/theme.ts` 파일로 분리했다.
 
-```ts
+```ts theme.ts
 export function isSystemDarkMode() {
   return (
     !!window.matchMedia &&
@@ -379,7 +379,7 @@ export function toggleDarkTheme(flag?: boolean) {
 
 그리고 `useToggleTheme` 훅에서, 접속 시 시스템 테마를 식별해서 다크 모드라면 다크 테마가 적용되도록 `useEffect`를 활용해서 구현했다.
 
-```tsx
+```tsx useToggleTheme.tsx
 "use client";
 
 import {
@@ -417,7 +417,7 @@ export default useToggleTheme;
 
 따라서 스크립트 태그에 로직을 담아서 `head`에 삽입하기로 했다. Nextjs에서는 스크립트 태그를 위한 `Script` 컴포넌트를 지원해주는데, 아쉽게도 원하는대로 작동하지 않아 증상이 여전했고 태그를 `head` 에 넣어주진 않았다. 그래서 `SyncThemeScript` 컴포넌트를 만들고, 스크립트 태그를 직접 사용해 로직을 작성하고 삽입했다.
 
-```tsx
+```tsx SyncThemeScript.tsx
 import { isSystemDarkTheme, toggleDarkTheme } from "@/utils/theme";
 
 const DANGEROUS_HTML = {
@@ -460,7 +460,7 @@ export default SyncThemeScript;
 
 여기에서는 위의 스크립트가 브라우저에서 실행되면서 HTML 태그의 클래스를 변경시켰기 때문에 발생한 것이다. 하지만 화면이 깜빡이는 문제를 해결하기 위해서는 어쩔 수 없기 때문에, `suppressHydrationWarning` 을 HTML 태그에 추가해서 하이드레이션 경고를 끌 수 있어서 적용했다. 해당 옵션은 해당 태그에만 적용되고, 하위에서 발생할 경우 여전히 발생할 수 있다고 한다. 그래서 다른 원인으로 발생할 경우 에러가 재등장할 수 있다고 해서, 다른 곳에서 문제가 생겼을 때에는 알 수 있다는 것에 조금 안심하고 적용했다.
 
-```tsx
+```tsx layout.tsx
 <html>
   <head suppressHydrationWarning>
     <SyncThemeScript />
@@ -475,7 +475,7 @@ export default SyncThemeScript;
 
 설정값을 저장하는 곳으로는 `localStorage`가 적당할 것 같았다. 그래서 `theme.ts` 파일에 `localStorage`를 사용해 테마를 관리하는 로직을 추가했다.
 
-```ts
+```ts theme.ts
 export function isSettingDark() {
   return localStorage.theme
     ? localStorage.theme === "dark"
@@ -496,7 +496,7 @@ export function toggleDarkTheme(flag?: boolean) {
 
 마지막으로, `SyncThemeScript` 의 HTML 컨텐츠를 수정해주었다. `isSystemDarkTheme` 대신 `isSettingDark` 가 실행되도록 변경하였다. 그리고 이 함수는 내부에서 `isSystemDarkTheme`를 사용하기 때문에, 참조할 수 있도록 내부에 추가했다.
 
-```ts
+```ts SyncThemeScript.tsx
 import {
   isSettingDark,
   isSystemDarkTheme,

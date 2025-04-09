@@ -54,7 +54,7 @@ function Codeblock({ codeblock }: CodeblockProps) {
   if (codeblock.meta) {
     return (
       <div className="my-10">
-        <pre className="!my-0 rounded-b-[0] py-1 border-b-1 border-gray-600">
+        <pre className="!my-0 py-1.5 rounded-b-[0] border-b-1 border-gray-600">
           {codeblock.meta}
         </pre>
         <Pre
