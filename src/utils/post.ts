@@ -13,7 +13,12 @@ interface PostFrontmatter {
 export const POST_DIRECTORY_PATH = path.join(process.cwd(), "public/posts");
 export const POST_PATHS = fs
   .readdirSync(POST_DIRECTORY_PATH)
-  .filter((path) => /\.mdx?$/.test(path));
+  .filter((path) =>
+    (process.env.NODE_ENV === "production"
+      ? /(?<!\.draft)\.mdx?$/
+      : /\.mdx?$/
+    ).test(path)
+  );
 
 export async function getPosts() {
   const posts = await Promise.all(
@@ -36,12 +41,7 @@ export async function getPosts() {
     (a, b) => new Date(b.data.date).getTime() - new Date(a.data.date).getTime()
   );
 
-  const published =
-    process.env.NODE_ENV === "production"
-      ? sort.filter((post) => !post.path.match(/.draft$/))
-      : sort;
-
-  return published;
+  return sort;
 }
 
 export async function getPost(title: string) {
