@@ -5,23 +5,25 @@ export interface CodeblockProps {
   codeblock: HighlightedCode;
 }
 
-export const lineNumbers: Exclude<AnnotationHandler, undefined> = {
+const lineNumbers = (number = 1): Exclude<AnnotationHandler, undefined> => ({
   name: "line-numbers",
   Line: (props) => {
-    const width = props.totalLines.toString().length + 2;
+    const total = props.totalLines + number - 1;
+    const line = props.lineNumber + number - 1;
+    const width = total.toString().length + 2;
     return (
       <div className="flex align-top">
         <span
           className={`text-right pr-[2ch]`}
           style={{ minWidth: `${width}ch` }}
         >
-          {props.lineNumber}
+          {line}
         </span>
         <InnerLine className="flex-1" merge={props} />
       </div>
     );
   }
-};
+});
 
 const markHandler: Exclude<AnnotationHandler, undefined> = {
   name: "mark",
@@ -34,8 +36,22 @@ const markHandler: Exclude<AnnotationHandler, undefined> = {
   }
 };
 
+const DEFAULT_HANDLER: AnnotationHandler[] = [markHandler];
+
 function Codeblock({ codeblock }: CodeblockProps) {
-  return <Pre code={codeblock} handlers={[markHandler, lineNumbers]} />;
+  const { annotations } = codeblock;
+
+  const handler = [...DEFAULT_HANDLER];
+
+  const lineNumber = annotations.find(
+    (annotation) => annotation.name === "line-numbers"
+  );
+
+  if (lineNumber) {
+    handler.push(lineNumbers(+lineNumber.query));
+  }
+
+  return <Pre code={codeblock} handlers={handler} />;
 }
 
 export default Codeblock;
