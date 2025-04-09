@@ -51,7 +51,22 @@ function Codeblock({ codeblock }: CodeblockProps) {
     handler.push(lineNumbers(+lineNumber.query));
   }
 
-  return <Pre code={codeblock} handlers={handler} />;
+  if (codeblock.meta) {
+    return (
+      <div className="my-10">
+        <pre className="!my-0 rounded-b-[0] py-1 border-b-1 border-gray-600">
+          {codeblock.meta}
+        </pre>
+        <Pre
+          className="!my-0 rounded-t-[0]"
+          code={codeblock}
+          handlers={handler}
+        />
+      </div>
+    );
+  }
+
+  return <Pre className="!my-10" code={codeblock} handlers={handler} />;
 }
 
 export default Codeblock;

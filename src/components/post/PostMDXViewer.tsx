@@ -28,7 +28,6 @@ function PostMDXViewer({ mdxSource }: PostMDXViewerProps) {
         "prose-pre:linear-transition-colors",
         "prose-h3:text-3xl prose-h3:border-b-1 prose-h3:pb-2 prose-h3:mt-16",
         "prose-h4:text-2xl prose-h4:mt-14",
-        "prose-pre:my-10",
         "prose-blockquote:my-10 prose-blockquote:py-2 prose-blockquote:[&>p]:my-0 prose-blockquote:border-primary",
         "prose-img:my-10",
         "prose-li:marker:text-foreground [&_li>p]:mb-0",
