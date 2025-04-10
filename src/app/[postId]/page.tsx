@@ -1,9 +1,9 @@
 import { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { lazy } from "react";
 
 import { formatDate } from "@/utils/date";
 import { getPost, getPosts } from "@/utils/post";
+import NotFound from "../not-found";
 
 const PostViewer = lazy(() => import("../../components/post/PostMDXViewer"));
 
@@ -44,7 +44,14 @@ async function Page({
 
   const source = await getPost(id);
 
-  if (!source) return notFound();
+  /**
+   * @TODO Fix to using notFound function.
+   * It is rendered NotFound component without theme.
+   */
+  // if (!source) notFound();
+  if (!source) {
+    return <NotFound />;
+  }
 
   const { title, date } = source.frontmatter;
 
