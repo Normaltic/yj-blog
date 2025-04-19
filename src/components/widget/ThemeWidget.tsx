@@ -20,11 +20,13 @@ function ThemeWidget({ className }: ThemeWidgetProps) {
       }
       onClick={() => toggleTheme()}
     >
-      <div className="absolute w-12 h-12 flex justify-center items-center origin-[50%_100%] animate-rise dark:animate-set">
-        <Sun className="fill-yellow-400" />
-      </div>
-      <div className="absolute w-12 h-12 flex justify-center items-center origin-[50%_100%] animate-set dark:animate-rise">
-        <Moon className="fill-yellow-400" />
+      <div className="animate-fade-in">
+        <div className="absolute w-12 h-12 flex justify-center items-center origin-[50%_100%] animate-rise dark:animate-set">
+          <Sun className="fill-yellow-400" />
+        </div>
+        <div className="absolute w-12 h-12 flex justify-center items-center origin-[50%_100%] animate-set dark:animate-rise">
+          <Moon className="fill-yellow-400" />
+        </div>
       </div>
     </div>
   );
