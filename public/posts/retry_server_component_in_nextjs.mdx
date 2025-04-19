@@ -1,7 +1,7 @@
 ---
-title: Next.js 서버 컴포넌트의 요청 실패 핸들링 해보기
+title: Next.js 서버 컴포넌트 랜더링 에러 재시도 해보기
 date: 2025-04-18 22:00:00
-summary: 서버 컴포넌트가 데이터 통신에 실패했다.
+summary: 서버 컴포넌트가 데이터 요청에 실패했다.
 ---
 
 Next.js의 App Router에서는 서버에서 실행되는 컴포넌트, 즉 서버 컴포넌트를 사용할 수 있다. 서버 컴포넌트는 서버에서 실행되어 그 결과를 바탕으로 HTML을 생성하고, 클라이언트로 전달해 렌더링하는 방식이다. 이 구조는 초기 렌더링 속도에 유리하다는 장점이 있다. 그리고 서버 컴포넌트 안에서는 데이터를 요청하거나, 비동기 작업을 수행하는 것도 가능하다.
@@ -62,7 +62,7 @@ export default async function Home() {
 }
 ```
 
-![사진 1) 기본 화면](../images/error_handling_try_in_nextjs/default_page_screen.png)
+![사진 1) 기본 화면](../images/reetry_server_component_in_nextjs/default_page_screen.png)
 
 그리고 데이터 요청 실패를 구현하기 위해, 5 이상일 때에는 통과, 5 미만일 때에는 에러를 던져 실패로 처리하는 로직을 적용했다.
 
@@ -77,7 +77,7 @@ export async function getRandomNumber() {
 
 만약 요청에 실패해서 페이지에서 에러가 발생하면, Next.js의 기본 에러 화면이 출력된다.
 
-![사진 2) 기본 에러](../images/error_handling_try_in_nextjs/default_error_screen.png)
+![사진 2) 기본 에러](../images/reetry_server_component_in_nextjs/default_error_screen.png)
 
 이 때, 컴포넌트 내부에서 `try/catch`구문을 사용하는 등으로 에러를 잡으면 좋겠지만, 예외 처리를 못한 경우가 있을 수 있다. 이 경우에는 `error.tsx`를 작성하여, 해당 페이지에서 에러가 발생했을 때 보여줄 화면을 정의할 수 있다([공식 문서 - Error handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling#using-error-boundaries)).
 
@@ -102,7 +102,7 @@ export default function Error({
 
 파일 이름을 `error.tsx`로 작성하고 내부에 컴포넌트를 작성한다. 이 컴포넌트는 클라이언트 컴포넌트여야 하기 때문에 `use client`를 작성해주어야 하며, 에러의 내용과 리셋 함수를 제공하여 로깅, 재시도 등을 할 수 있다. 페이지 내부에서 캐치하지 못한 에러가 발생할 경우 Next.js가 해당 컴포넌트를 출력한다.
 
-![사진 3) error page 적용](../images/error_handling_try_in_nextjs/default_error_page.png)
+![사진 3) error page 적용](../images/reetry_server_component_in_nextjs/default_error_page.png)
 
 `error.tsx`는 페이지 단위로 에러 메세지를 출력한다. 그런데 페이지가 아니라, 에러가 발생한 영역이나 컴포넌트 단위로 핸들링하고 싶을수도 있다. 이 때에는, 클래스 컴포넌트의 `getDerivedStateFromError`와 `componentDidCatch` 메서드를 사용하면, 특정 범위의 에러 처리를 수행할 수 있다.
 
@@ -164,7 +164,7 @@ export default class ErrorBoundary extends Component<
 
 해당 컴포넌트로 감지하고 싶은 영역을 감싸면, 이후 내부 트리에서 에러가 발생했을 때 이를 감지하고 화면을 대체하여 보여준다.
 
-![사진 4) ErrorBoundary 적용](../images/error_handling_try_in_nextjs/default_error_boundary_screen.png)
+![사진 4) ErrorBoundary 적용](../images/reetry_server_component_in_nextjs/default_error_boundary_screen.png)
 
 이렇게 `error.tsx`와 `ErrorBoundary`를 사용하면, 에러가 발생했을 때 페이지별, 혹은 컴포넌트 단위로 제어할 수 있게 된다.
 
@@ -393,7 +393,7 @@ export default async function Home() {
 
 그리고 실행 결과는 바로..!
 
-![사진 5) 함수는 직접 전달할 수 없다](../images/error_handling_try_in_nextjs/function_cannot_passed_directly.png)
+![사진 5) 함수는 직접 전달할 수 없다](../images/reetry_server_component_in_nextjs/function_cannot_passed_directly.png)
 
 이 에러는 말 그대로, 서버 컴포넌트에서 정의된 함수를 클라이언트 컴포넌트로 직접 전달할 수 없다는 내용이다.
 
@@ -554,7 +554,7 @@ export default async function Home() {
 
 실행 결과, 에러가 발생했을 때 `Fallback` 컴포넌트가 뜨고, Refresh를 누르면 새로운 서버 컴포넌트를 받아와 출력하는 것을 확인했다.
 
-![사진 6) 새로 고침](../images/error_handling_try_in_nextjs/errorboundary_with_refresh.gif)
+![사진 6) 새로 고침](../images/reetry_server_component_in_nextjs/errorboundary_with_refresh.gif)
 
 이를 통해, 목표로 하던 서버 컴포넌트를 다시 렌더링하는 기능을 구현할 수 있었다.
 
@@ -577,11 +577,11 @@ export default async function Home() {
 
 하나는 요청에 실패하여 Retry 버튼이 노출되었고, 하나는 요청에 성공하여 숫자를 출력하고 있다.
 
-![사진 7) 하나 더](../images/error_handling_try_in_nextjs/one_more_random_number.png)
+![사진 7) 하나 더](../images/reetry_server_component_in_nextjs/one_more_random_number.png)
 
 이 때, 에러가 난 부분에 대해서 다시 시도하기 위해 Retry 버튼을 눌러 새로 고침을 수행했다. 무슨 일이 일어날까?
 
-![사진 8) 다 같이 업데이트](../images/error_handling_try_in_nextjs/one_more_random_number_refresh.gif)
+![사진 8) 다 같이 업데이트](../images/reetry_server_component_in_nextjs/one_more_random_number_refresh.gif)
 
 에러가 난 빨간색 컴포넌트를 통해 새로 고침을 진행했는데, 아래 컴포넌트의 숫자가 변경되었다. 페이지를 새로 고치는 과정에서, 페이지의 모든 서버 컴포넌트를 리렌더링하여 새로운 데이터를 반영한 것이다.
 
