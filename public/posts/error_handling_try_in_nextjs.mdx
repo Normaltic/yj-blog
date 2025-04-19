@@ -181,7 +181,7 @@ export default class ErrorBoundary extends Component<
 ```tsx ClientRandomNumber.tsx
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getRandomNumber } from "@/utils/getRandomNumber";
 
 import Number from "./Number";
@@ -197,7 +197,7 @@ export default function ClientRandomNumber({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error>();
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     try {
       setLoading(true);
       setError(undefined);
@@ -208,11 +208,11 @@ export default function ClientRandomNumber({
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetch();
-  }, []);
+  }, [fetch]);
 
   if (loading) {
     return <div className={className}>Loading...</div>;
@@ -220,7 +220,7 @@ export default function ClientRandomNumber({
 
   if (number === undefined || error) {
     return (
-      <div className="w-full h-full flex justify-center items-center">
+      <div className={`${className ?? ""} bg-red-400`}>
         <button type="button" onClick={fetch}>
           Refresh
         </button>
@@ -261,6 +261,7 @@ export default async function ServerRandomNumber({
   try {
     number = await getRandomNumber();
   } catch {
+    // !mark (1:1)
     return <ClientRandomNumber className={className} />;
   }
 
@@ -268,7 +269,7 @@ export default async function ServerRandomNumber({
 }
 ```
 
-먼저 `ServerRandomNumber` 컴포넌트에서 데이터를 요청한다. 요청이 정상적으로 실행됬을 경우 결과물을 출력한다. 그리고 요청에 실패하면, 이전에 작성했던 `ClientRandomNumber` 반환하여 클라이언트에서 처리하도록 한다.
+먼저 `ServerRandomNumber` 컴포넌트에서 데이터를 요청한다. 요청이 정상적으로 실행됬을 경우 결과물을 출력한다. 그리고 요청에 실패하면, 이전에 작성했던 `ClientRandomNumber` 컴포넌트를 반환하여 클라이언트에서 처리하도록 한다.
 
 이렇게 하면 최초에는 서버에서 요청을 시도하고, 실패했을 때 클라이언트 컴포넌트를 렌더링하여 재요청 로직을 수행하거나 로딩 표시 등을 클라이언트 쪽에서 처리할 수 있게 된다. 서버 컴포넌트 자체를 재랜더링 하는 대신, 동일한 작동을 하는 클라이언트 컴포넌트가 이를 대신 처리하도록 하는 방법이다.
 
@@ -289,7 +290,7 @@ export default async function ServerRandomNumber({
 ```tsx ClientRender.tsx
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 export default function ClientRender<T>({
   fetcher,
@@ -302,7 +303,7 @@ export default function ClientRender<T>({
   const [error, setError] = useState<Error | undefined>(undefined);
   const [loading, setLoading] = useState(false);
 
-  const fetch = async () => {
+  const fetch = useCallback(async () => {
     try {
       setLoading(true);
       setError(undefined);
@@ -313,15 +314,19 @@ export default function ClientRender<T>({
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetcher]);
 
   if (loading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="w-full h-full flex justify-center items-center">
+        Loading...
+      </div>
+    );
   }
 
   if (!data || error) {
     return (
-      <div className="w-full h-full flex justify-center items-center">
+      <div className="w-full h-full flex justify-center items-center bg-red-400">
         <button type="button" onClick={fetch}>
           Refresh
         </button>
@@ -398,15 +403,46 @@ Next.js의 서버 컴포넌트는 브라우저가 아닌 서버에서 실행되�
 
 그래서 여기서 시도해보려고 했던 `fetcher`, `render` 함수를 전달하는 방식은 에러가 발생하며 작동하지 않았다.
 
-물론 모든 함수를 무조건 넘겨주지 못하는건 아닌데, 만약 함수가 Next.js의 서버 액션이라면 `use server` 디랙티브를 통해 해당 함수가 서버에서 실행될 함수임을 명시해주면 가능하다. 하지만 보통 form action이나 서버 함수를 클라이언트에서 호출하기 위한 용도로 사용되기 때문에, 여기서 사용하려는 구조처럼 클라이언트 컴포넌트로 함수를 `props`로 넘겨 실행하려는 상황에서는 적합하지 않다.
+클라이언트 컴포넌트로 모든 함수를 무조건 넘겨주지 못하는건 아닌데, 만약 함수가 Next.js의 서버 액션이라면 `use server` 디랙티브를 통해 해당 함수가 서버에서 실행될 함수임을 명시해주면 가능하다. 하지만 보통 form action이나 서버 함수를 클라이언트에서 호출하기 위한 용도로 사용되기 때문에, 여기서 사용하려는 구조처럼 클라이언트 컴포넌트로 함수를 `props`로 넘겨 실행하려는 상황에서는 적합하지 않다.
 
 결과적으로, `renderProps`를 사용해서 추상화 하는 해당 방식은 불가능하다는 결론에 도달했다.
+
+그러나 서버 컴포넌트와 클라이언트 컴포넌트를 조합하는 형태의 추상화는 실패했지만, `ClientRender`처럼 재시도 로직을 컴포넌트 형태로 추상화 한 구조는 클라이언트 환경에서는 사용할 수 있을 것 같다.
+
+물론, 상태와 로직만 재사용하려면 커스텀 훅으로도 충분히 구현할 수 있다.
+
+```tsx
+function useApi<T>(fetcher: () => Promise<T>) {
+  const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<T>();
+  const [error, setError] = useState<Error>();
+
+  const fetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(undefined);
+      const res = await fetcher();
+      setData(res);
+    } catch (e) {
+      setError(e as Error);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetcher]);
+
+  return [fetch, data, loading, error] as const;
+}
+```
+
+하지만 로딩 표현과 재요청 버튼 등의 UI를 포함한 구조를 반복적으로 사용해야 하는 경우에는, `ClientRender` 처럼 컴포넌트 형태로 정리한 것을 사용하는게 더 편하고 실용적일 수 있다.
+
+원하는 목표는 달성하지 못했지만, 재시도 패턴을 컴포넌트 형태로 정리해볼 수 있었다는 점에서 다른 방향에서의 성과가 있었던 작업이었다고 생각한다.
 
 ### ErrorBoundary와 router.refresh
 
 렌더링에 실패한 서버 컴포넌트를 다시 시도하는 로직을 구현할 수 없는지 알아보던 도중, [Error handling and retry with React Server Components](https://edspencer.net/2024/7/16/errors-and-retry-with-react-server-components) 글을 찾을 수 있었다. `react-error-boundary` 라이브러리의 `ErrorBoundary`와 함께 `router.refresh` 메서드를 사용해서, 서버 컴포넌트를 리렌더링 하는 내용이다.
 
-`router.refresh` 메서드는 이름 그대로 새로 고침을 하는 메서드로, Next.js의 `useRouter`를 통해 `router` 객체에 접근할 수 있다. 비슷하게 새로 고침은 `window.location.reload`로도 수행할 수 있는데, 두 메서드에는 중요한 차이점이 존재한고 한다.
+`router.refresh` 메서드는 이름 그대로 새로 고침을 하는 메서드로, Next.js의 `useRouter`를 통해 `router` 객체에 접근할 수 있다. 비슷하게 새로 고침은 `window.location.reload`로도 수행할 수 있는데, 두 메서드에는 중요한 차이점이 존재한다고 한다.
 
 `window.location.reload`는 브라우저에서 제공하는 기본 기능으로, HTML을 포함하여 전체 페이지를 강제로 다시 로드한다. 이 방식은 상태나 스크롤 위치 등이 초기화되고 화면이 깜빡일 수 있다.
 
