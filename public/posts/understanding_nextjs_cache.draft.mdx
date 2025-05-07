@@ -1,0 +1,116 @@
+---
+title: Next.js의 캐싱 알아보기
+date: 2025-05-07 21:00:00
+summary: Next.js의 다양한 내부 캐싱 전략을 정리해보자.
+---
+
+Next.js를 공부하면서 다양한 캐싱 전략이 내부에 구현되어 있다는 것을 알게 되었다.
+
+그냥 알고 넘어가는 것 보다, 한 번 쯤 정리해보는게 도움이 될 것 같다는 생각이 들었다. 공식 문서와, 벨로그의 글을 기반해서 정리해보고자 한다.
+
+### 캐싱
+
+캐싱(Caching)은 자주 사용하는 데이터를 빠르게 불러오기 위해 특정 위치에 보관해두는 기법.
+
+### Next.js에서의 캐싱
+
+Next.js에서는 다양한 캐싱 전략을 내부에서 사용하고 있음. 여러 레이어에서 다양한 캐싱이 작동하고 있음.
+
+- Request Memoization
+- Data Cache
+- Full Route Cache
+- Router Cache
+
+캐싱의 구조는 아래 다이어그램을 통해 확인할 수 있다. 빌드 타임과, 정적 경로에 처음 요청이 들어왔을 때의 동작이다.
+
+(그림 - 캐싱 구조)
+
+캐싱은 다양한 상황에 따라 달라진다고 한다. Next.js는 대부분의 캐싱을 자동으로 구성해주는데, 필요할 경우 직접 제어할 수도 있다.
+
+### Request Memoization
+
+Request Memoization은 빌드 시 동일한 URL와 옵션을 가지는 요청에 대한 응답을 메모이제이션하여, 동일한 요청을 할 경우 한 번만 할 수 있도록 하는 메커니즘이다.
+
+`GET` 에만 작동하며, `POST`, `PUT` 등에는 작동하지 않는다.
+
+사실, 리액트의 기능에 가깝다.
+
+#### Duration
+
+서버 요청이 처리될 때 까지 유지되며, 랜더링 하는동안 유지된다.
+
+#### Revalidating
+
+요청 사이에 공유되지 않으며, 랜더링 도중에만 유지되고 랜더링이 끝난 후 제거된다. 따라서 재검증을 할 필요가 없다.
+
+### Data Cache
+
+Next.js 에서는 서버 요청 뿐만 아니라, 그 이후에도 데이터를 재사용할 수 있도록 지속적으로 유지하는 내장 데이터 캐시가 존재한다. Next.js에서 fetch API를 확장해서, 각 데이터 요청에 대해서 자체 캐싱 메커니즘을 설정할 수 있게 하였다.
+
+기본적으로 fetch의 데이터 요청은 캐싱되지 않으나, cache, next.revalidate 옵션을 통해 캐싱 동작을 구성할 수 있다. 기본 fetch의 cache 옵션은 브라우저의 캐시와 상호 작용하는 방식을 나타내지만, Next.js에서는 서버에서의 요청이 서버 캐시와 상호 작용하는 방식을 나타낸다.
+
+> 공식 문서상에는 기본적으로 캐싱되지 않는다고 한다. 하지만 Next.js 14에서는 기본적으로 `force-cache`가 적용되며, Next.js 15부터 기본값이 `no-store`로 변경되었다. 공식 문서는 최신 버전을 기준으로 작성되어 있다.
+
+#### Duration
+
+서버 요청 사이에 지속된다. 재검증하거나 Opt-out하지 않는 이상 유지된다.
+
+#### Revalidating
+
+캐시된 데이터는 아래 두 방법으로 재검증을 진행할 수 있다.
+
+- Time-based Revalidation
+- On-demand Revalidation
+
+#### Opt-out
+
+기본적으로 Next.js 15에서는 데이터 요청은 캐싱되지 않으므로 해제할 필요가 없다. 다만, 이전 버전에서는 `no-store`를 적용하여 데이터 캐시를 해제할 수 있다.
+
+### Full Route Cache
+
+Full Route Cache는 정적 라우트의 랜더링 결과물인 HTML과 React Server Component Payload를 서버에 저장하여, 이후 서버 요청에서 재사용 하는 매커니즘이다.
+
+동적 페이지에는 작동하지 않는다.
+
+#### Duration
+
+기본적으로 Full Route Cache는 지속적으로 유지된다.
+
+#### Invalidation
+
+Full Route Cache를 무효화하는 방법은 두 가지가 있다.
+
+- Data Cache 재검증
+- 재배포
+
+#### Opt-out
+
+메커니즘을 옵트아웃 하거나, 모든 요청에 대해 동적으로 랜더링하려면 다음과 같은 방법을 사용할 수 있다.
+
+- Dynamic Function
+- Route Segment
+- Data Cache Opt-out
+
+### Router Cache
+
+Next.js의 캐싱 메커니즘은 서버에서 이루어지는 것 뿐만 아니라, 클라이언트에도 존재한다. 레이아웃, 로딩, 페이지로 나뉜 React Server Component Payload를 클라이언트의 메모리에 저장하는 Router Cache를 가지고 있다.
+
+페이지를 탐색할 때 마다 RSC Payload를 메모리에 저장하고, 동일한 경로로 이동하면 서버에 요청하지 않고 메모리를 참조해 재사용한다.
+
+#### Full Router Cache와의 차이점
+
+두 개는 다르다. 상호 보완적인 역할을 수행한다.
+
+#### Duration
+
+캐시는 브라우저 메모리에 저장된다. 페이지 탐색 간에는 유지되지만 새로 고침을 할 경우 사라진다.
+
+#### Invalidation
+
+- 서버 액션에서 온디멘드로 페이지나 데이터를 재검증할 경우
+- router.refresh를 수행하면 Router Cache를 무효화하고 서버에 새 요청을 보낸다.
+
+### 참고
+
+- [Next.js의 캐싱 쉽게 이해하기](https://velog.io/@clydehan/Next.js의-캐싱-쉽게-이해하기)
+- [공식 문서 - Caching in Next.js](https://nextjs.org/docs/app/deep-dive/caching#cache-interactions)
