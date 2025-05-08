@@ -2,6 +2,7 @@ import fs from "fs";
 import { serialize } from "next-mdx-remote/serialize";
 import path from "path";
 import { remarkCodeHike, recmaCodeHike } from "codehike/mdx";
+import remarkGfm from "remark-gfm";
 
 interface PostFrontmatter {
   title: string;
@@ -63,7 +64,8 @@ export async function getPost(title: string) {
               theme: "github-dark"
             }
           }
-        ]
+        ],
+        [remarkGfm]
       ],
       recmaPlugins: [
         [
