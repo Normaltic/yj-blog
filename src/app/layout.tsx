@@ -6,6 +6,7 @@ import ThemeWidget from "@/components/widget/ThemeWidget";
 import SyncThemeScript from "@/components/widget/SyncThemeScript";
 
 import "./globals.css";
+import GoogleAnalytics from "@/components/ga/GoogleAnalytics";
 
 const pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
@@ -30,6 +31,9 @@ export default function RootLayout({
       <body
         className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
       >
+        {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS} />
+        )}
         <header className="flex justify-between items-end max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
           <Link href="/">
             <h1 className="text-4xl">Blog</h1>
