@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import Link from "next/link";
 
-import ThemeWidget from "@/components/widget/ThemeWidget";
-import SyncThemeScript from "@/components/widget/SyncThemeScript";
+import ThemeWidget from "@/components/theme/ThemeWidget";
+import SyncThemeScript from "@/components/theme/SyncThemeScript";
 
 import "./globals.css";
 import GoogleAnalytics from "@/components/ga/GoogleAnalytics";
