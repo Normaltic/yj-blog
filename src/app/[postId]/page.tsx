@@ -1,11 +1,9 @@
 import { Metadata } from "next";
-import { lazy } from "react";
 
 import { formatDate } from "@/utils/date";
 import { getPost, getPosts } from "@/utils/post";
+import PostViewer from "@/components/post/PostMDXViewer";
 import NotFound from "../not-found";
-
-const PostViewer = lazy(() => import("../../components/post/PostMDXViewer"));
 
 export async function generateStaticParams() {
   const posts = await getPosts();
