@@ -46,7 +46,9 @@ export async function getPosts() {
 }
 
 export async function getPost(title: string) {
-  const postFileName = POST_PATHS.find((str) => str.includes(title));
+  const postFileName = POST_PATHS.find((str) =>
+    new RegExp(`^${title}.mdx?$`).test(str)
+  );
   if (!postFileName) return undefined;
 
   const postFilePath = path.join(POST_DIRECTORY_PATH, postFileName);
