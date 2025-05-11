@@ -25,12 +25,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <SyncThemeScript />
-      </head>
       <body
         className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
       >
+        <SyncThemeScript />
         {process.env.NODE_ENV === "production" &&
           process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS && (
             <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS} />
