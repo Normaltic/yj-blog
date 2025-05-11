@@ -31,9 +31,10 @@ export default function RootLayout({
       <body
         className={`${pretendard.className} bg-background text-foreground linear-transition-colors`}
       >
-        {process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS && (
-          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS} />
-        )}
+        {process.env.NODE_ENV === "production" &&
+          process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS && (
+            <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GOOGLE_ANALYTICS} />
+          )}
         <header className="flex justify-between items-end max-w-4xl m-auto py-6 px-4 border-primary border-b-2">
           <Link href="/">
             <h1 className="text-4xl">Blog</h1>
