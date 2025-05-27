@@ -6,9 +6,9 @@ summary: useSyncExternalStore를 활용하면 전역 상태를 직접 구현할 
 
 간혹 프로젝트를 진행하다 보면, 인접한 컴포넌트들이 상태를 공유해야 하는 순간이 있다. 이럴 때, 보통은 상태 선언 위치를 재조정하여 `props`를 통해 전달하도록 한다.
 
-그러나 해당 방법은 컴포넌트 사이의 거리가 멀 때 등 어느 정도 한계가 존재하여, 프로젝트의 복잡성이 증가하게 된다. 이 경우 보통 전역 상태를 추가하여 각 컴포넌트들이 상태를 공유하도록 만들어 문제를 해결할 수 있다.
+그러나 해당 방법은 컴포넌트 사이의 거리가 멀 때 등에서 어느 정도 한계가 존재하여, 프로젝트의 복잡성이 증가하게 된다. 이 경우 보통 전역 상태를 추가하여 각 컴포넌트들이 상태를 공유하도록 만들어 문제를 해결할 수 있다.
 
-전역 상태는 React의 Context API 또는 다양한 외부 라이브러리를 통해 정의할 수 있다. 대표적으로 React, Zustand가 있으며, 라이브러리를 사용한다면 전역 상태를 손 쉽게 정의하고 관리할 수 있게 된다.
+전역 상태는 React의 Context API 또는 다양한 외부 라이브러리를 통해 정의할 수 있다. 대표적으로 Redux, Zustand가 있으며, 라이브러리를 사용한다면 전역 상태를 손쉽게 정의하고 관리할 수 있게 된다.
 
 그런데 꼭 외부 상태 라이브러리를 사용해야 할까? React의 자체 기능만으로는 할 수 없을까? 같은 고민을 하던 도중, `useSyncExternalStore` API 를 접하게 되었다.
 
@@ -64,7 +64,7 @@ function Counter() {
 ```tsx
 function CounterViewer() {
   const [count, setCount] = useState(0);
-  return <p>{counter}</p>;
+  return <p>{count}</p>;
 }
 
 function CounterController() {
@@ -87,7 +87,7 @@ function CounterController() {
 이 경우, 같은 부모로 해당 상태의 위치를 끌어올리고 `props`를 전달하는 방식으로 해결할 수 있다.
 
 ```tsx Counter.tsx
-function Conter() {
+function Counter() {
   const [count, setCount] = useState(0);
 
   return (
@@ -209,7 +209,7 @@ function CounterViewer() {
 import { useContext } from "react";
 import CounterContext from "CounterContext";
 
-function CounterContext() {
+function CounterController() {
   const context = useContext(CounterContext);
   if (!context) {
     // 예외 처리를 통해, Provider의 트리 안에서 사용하는지 확인할 수 있다.
@@ -247,7 +247,7 @@ function CounterContext() {
 
 하지만 Context API는 단점도 존재한다. 우선, Context를 참조하는 모든 컴포넌트들은 상태가 바뀔 때 무조건 리렌더링 된다.
 
-> 16.3 버전 이전의 Context API의 경우, Provider 내의 모든 자식 컴포넌트가 리렌더링 되었다. 16.3 이후에 정식으로 릴리즈된 현재 API는 해당 문제가 해결되었다.
+> 16.3 버전 이전의 Context API의 경우, Provider 내의 모든 자식 컴포넌트가 리렌더링 되었다. 16.3에 정식으로 릴리즈된 현재 API는 해당 문제가 해결되었다.
 
 예를 들어, Context가 단일 상태가 아닌, 여러 개의 데이터를 가진다고 생각해보자.
 
@@ -294,7 +294,7 @@ function GeneralContextProvider({ children }: { children: React.ReactNode }) {
 }
 ```
 
-따라서, `ThemeManager`가 `theme` 속성을 읽는다고 해도, 참조하는 Context는 객체이므로, 다른 속성이 변경되면 객체가 변경되므로 해당 컴포넌트는 리렌더링 된다. 특정 속성만을 선택하여 구독하는(일명 Selector) 기능이 제공된다면 좋겠지만, Context는 해당 기능을 제공해주지 않는다. 그래서 단일 Context 상태의 속성이 많아질 경우, 불필요한 리렌더링이 자주 발생할 수 있다.
+따라서, `ThemeManager`가 `theme` 속성을 읽는다고 해도, 참조하는 Context는 객체이므로, 다른 속성이 변경되면 객체가 변경되어 해당 컴포넌트는 리렌더링 된다. 특정 속성만을 선택하여 구독하는(일명 Selector) 기능이 제공된다면 좋겠지만, Context는 해당 기능을 제공해주지 않는다. 그래서 단일 Context 상태의 속성이 많아질 경우, 불필요한 리렌더링이 자주 발생할 수 있다.
 
 물론, 이것은 Context를 분리한다면 어느정도 해결할 수 있다. `theme`와 `lang`은 확실히 다른 속성이므로, 분리하여 표현이 가능하다.
 
@@ -341,9 +341,9 @@ const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?
 
 `subscribe` 는 `callback` 함수를 받아 상태를 구독하는 함수이다. 상태가 변경될 때 해당 `callback`이 호출되도록 구성해야 하며, `callback`이 호출될 경우 React가 다음에 설명할 `getSnapshot`을 호출하여 필요할 경우 컴포넌트를 다시 렌더링하도록 한다.
 
-주의할 점은, 이 함수는 구독을 정리하는 함수를 반환해야만 하며, `subscribe`함수가 변경될 경우 React는 상태를 재구독하여, 이로 인해 성능 문제가 발생할 수 있다. 따라서 `subscribe`는 불변하거나 memoization 되어야 한다.
+주의할 점은, 이 함수는 구독을 정리하는 함수를 반환해야만 한다. 그리고 `subscribe`함수가 변경될 경우 React는 상태를 재구독하여, 이로 인해 성능 문제가 발생할 수 있다. 따라서 `subscribe`는 불변하거나 memoization 되어야 한다.
 
-`getSnapshot`은 필요한 상태의 스냅샷(실제 값)을 반환하는 함수이다. 상태가 변경되지 않았을 경우 항상 동일한 값(참조 포함)을 반환해야 하며, 상태가 변경될 경우에는 다른 값을 반환해야 한다. 반한된 값이 다르면 React는 리렌더링을 수행하고, 내부적으로 `Object.is`로 비교한다.
+`getSnapshot`은 필요한 상태의 스냅샷(실제 값)을 반환하는 함수이다. 상태가 변경되지 않았을 경우 항상 동일한 값(참조 포함)을 반환해야 하며, 상태가 변경될 경우에는 다른 값을 반환해야 한다. 내부적으로 `Object.is`를 사용해 반환 값을 비교하고, 반한된 값이 다르면 React는 리렌더링을 수행한다.
 
 `getServerSnapshot`은 서버 렌더링 전용 옵션으로, 서버 렌더링 시점의 초기 상태를 반환하는 함수다. 클라이언트와 서버에서 실행될 때 동일한 값이 반환되어야 하이드레이션이 정상적으로 수행되며, 이 함수가 제공되지 않는다면 서버 렌더링 도중 오류가 발생할 수 있다.
 
@@ -422,7 +422,7 @@ function useCounterStore() {
 }
 ```
 
-실행 결과, 정상적으로 작동하는 것을 확인헸다.
+실행 결과, 정상적으로 작동하는 것을 확인했다.
 
 ![사진 3) Working counter](../images//react_global_state_without_library/working_counter.gif)
 
@@ -483,11 +483,21 @@ function useIsOnline() {
 
 이를 참조하여, 다른 상태 관리 라이브러리 처럼, 전역 상태를 선언하고 React에서 구독할 수 있는 전역 상태 관리 모듈을 만들어보자.
 
-> 해당 섹션은 구현 순서대로 작성되어 있으며, 단계별로 진행된다. 결과는 해당 섹션의 마지막 '정리' 부분에 정리되어 있다.
+해당 섹션은 구현 순서대로 작성되어 있으며, 아래 단계별로 진행했다. 구현 결과는 해당 섹션의 마지막 '정리' 부분에서 한 번에 정리하고 있다.
+
+1. 기본 구현
+2. Factory 함수로 모듈화
+3. 상태 변경 함수 추상화
+4. `useStore` 내장
+5. `subscribe` 함수 확장
+6. `selector` 기능 추가
+7. `immer` 적용
+8. 업데이트 함수 명시화
+9. 정리
 
 #### 기본 구현
 
-우선, 앞서 봤던 방법대로 구현한다. 관리할 상태의 구조를 먼저 정의한다.
+우선, 앞서 `counter`를 선언했던 방식으로 구현해보자. 관리할 상태의 구조를 먼저 정의한다.
 
 ```ts envStore.ts
 export interface EnvStore {
@@ -518,7 +528,7 @@ export function setSnapshot<T extends keyof EnvStore>(
 }
 
 export function subscribe(listener: () => void) {
-  listeners.push(listener);
+  listeners.add(listener);
   return () => listeners.delete(listener);
 }
 ```
@@ -671,7 +681,7 @@ function createStore<T>(initialStore: T) {
   }
 
   function subscribe(listener: () => void) {
-    listeners.push(listener);
+    listeners.add(listener);
     return () => listeners.delete(listener);
   }
 }
@@ -688,9 +698,9 @@ export const { subscribe, getSnapshot, setSnapshot } = createStore(envStore);
 
 #### useStore 내장
 
-Factory 함수를 통해 쉽게 전역 상태를 선언할 수 있게 되었지만, 각 전역 상태마다 별도의 `useSyncExternalStore`를 사용하는 Custom Hook을 선언해야 하는 것은 여전해, 반복적인 작업이 필요하다.
+Factory 함수를 통해 쉽게 전역 상태를 선언할 수 있게 되었지만, 매번 `useSyncExternalStore`를 호출하거나, 각 전역 상태마다 별도로 Custom Hook을 선언해야 하는 것은 여전해, 반복적인 작업이 필요하다.
 
-Factory 함수에서 Hook 도 반환해주면 더 편해지지 않을까? 내부에서 선언된 각 함수들을 전달 받은 `useSyncExternalStore`를 감싸는, Hook 을 선언해 반환하도록 하자.
+Factory 함수에서 Hook 도 반환해주면 더 편해지지 않을까? 내부에서 선언된 각 함수들을 전달 받은 `useSyncExternalStore`를 감싸는 Hook 을 선언해 반환하도록 하자.
 
 ```ts createStore.ts
 import { useSyncExternalStore } from "react";
@@ -744,7 +754,7 @@ subscribe(() => {
 });
 ```
 
-`subscribe`의 현재 명세상 `getSnapshot`을 호출해 상태를 받아와야 하고, 이전 상태를 확인할 수는 없는 구조다. 이를 조정하여, `subscribe`에서 이전 값과 현재 값을 확인할 수 있도록 확장해보자.
+`subscribe`의 현재 명세상 `getSnapshot`을 호출해 상태를 받아와야 하고, 변경되기 이전 상태를 확인할 수는 없는 구조다. 이를 수정하여, `subscribe`에서 이전 값과 현재 값을 확인할 수 있도록 확장해보자.
 
 ```ts createStore.ts
 type Listener<T> = (prev: T, next: T) => unknown;
@@ -765,7 +775,7 @@ function createStore<T>(initialStore: T) {
 }
 ```
 
-`Listener<T>` 타입을 선언해주고 기존 `listener`의 타입을 변경한다. 그리고 `setSnapshot`에서 상태를 변경하기 전 이전 값을 분리하고, `callback`들을 호출할 때 이전 값과 현재 값을 전달하도록 한다.
+`Listener<T>` 타입을 선언해주고 기존 `listener`에 타입을 지정한다. 그리고 `setSnapshot`에서 상태를 변경하기 전 이전 값을 복사하고, `callback`들을 호출할 때 이전 값과 현재 값을 전달하도록 한다.
 
 그리고 아래와 같이 적용하면, `console.log`에 이전 값과 현재 값이 잘 출력되는 것을 확인할 수 있다.
 
@@ -871,7 +881,7 @@ yarn add use-sync-external-store
 yarn add --dev @types/use-sync-external-store
 ```
 
-`useSyncExternalStoreWithSelector` 의 명세는 `useSyncExternalStore`와 거의 동일한데, 추가로 두 개를 더 받는다.
+`useSyncExternalStoreWithSelector` 의 명세는 `useSyncExternalStore`와 거의 동일한데, 추가로 두 개를 더 받는다. 해당 Hook의 타입 정의는 다음과 같다.
 
 ```ts @types/use-sync-external-store/with-selector.d.ts
 export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
@@ -883,7 +893,7 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
 ): Selection;
 ```
 
-해당 Hook의 타입 선언 부분이다. `selector`와, 비교함수인 `isEqual`을 추가로 전달해야 한다. `isEqual`의 경우 선택적으로 받는데, 내부 소스 코드를 보아 전달하지 않으면 `Object.is`로 비교하는 것 같다([useSyncExternalStore.js#L83](https://github.com/facebook/react/blob/main/packages/use-sync-external-store/src/useSyncExternalStoreWithSelector.js#L83)).
+`selector`와, 비교함수인 `isEqual`을 추가로 전달해야 한다. `isEqual`의 경우 선택적으로 받는데, 내부 소스 코드를 보아 전달하지 않으면 `Object.is`로 비교하는 것 같다([useSyncExternalStoreWithSelector.js#L83](https://github.com/facebook/react/blob/main/packages/use-sync-external-store/src/useSyncExternalStoreWithSelector.js#L83)).
 
 Hook의 타입을 참고해서, `createStore`에 `selector`가 적용된 새 Hook을 추가해주도록 하자.
 
@@ -964,11 +974,11 @@ setTimeout(() => {
 }, 3000);
 ```
 
-3초 뒤에 `'executed'`가 출력이 되나, `'rendered'`는 다시 출력되지 않는 것을 확인할 수 있었다.
+3초 뒤에 `'executed'`가 출력이 되나, `'rendered'`는 다시 출력되지 않는 것을 확인할 수 있었다. 그래서 꼭 필요한 상태만 구독할 수 있는 `selector` 기능을 구현할 수 있게 되었다.
 
 #### immer 연동
 
-이전 테스트에서, `release`를 새 객체로 만들었는데, 그 이유는 불변성을 지키기 위해서였다. 물론, 기존 구현에서 하위 객체를 신경 쓰지 않기 때문도 있지만, 불변성을 지키기 위해서이기도 하다.
+이전 테스트에서, `release`를 새 객체로 만들었는데, 그 이유는 불변성을 지키기 위해서였다. 물론, 기존 구현에서 하위 객체를 신경 쓰지 않기 때문도 있지만, 불변성을 지키기 위해서이다.
 
 `release` 속성을 참조하는 컴포넌트가 있다고 하자.
 
@@ -994,7 +1004,7 @@ setSnapshot({
 
 그렇다면 업데이트할 때 매번 새 객체를 만들어서 전달해주어야 하는데, 조금 번거로울 수 있다. 객체의 깊이가 깊어질수록 더욱 심해질 것이다. 이를 위한 라이브러리가 있는데, 바로 `immer` 이다.
 
-간단하게 설명하면, `immer`는 불변성을 신경쓰지 않고 객체를 수정해도 이를 반영해 새로운 객체를 생성해주는 라이브러리이다.
+간단하게 설명하면, `immer`는 불변성을 신경 쓰지 않고 객체를 수정해도 이를 반영해 새로운 객체를 생성해주는 라이브러리이다.
 
 ```ts
 const obj1 = {
@@ -1020,7 +1030,7 @@ const obj2 = produce(obj1, (draft) => {
 console.log(obj1.name); // "obj1"
 ```
 
-`produce`의 첫 번째 파라미터로는 원본 객체, 두 번째 파라미터로는 해당 객체를 어떻게 수정할지에 대한 함수를 전달한다. 그러면 `immer`는 함수의 실행 결과를 원본 객체에 반영하고, 새로운 객체를 반환한다.
+`produce`의 첫 번째 파라미터로는 원본 객체, 두 번째 파라미터로는 해당 객체를 어떻게 수정할지에 대한 함수를 전달한다. 그러면 `immer`는 함수의 수정 결과를 반영한 새로운 객체를 반환한다.
 
 해당 라이브러리를 적용해보자.
 
@@ -1038,7 +1048,7 @@ function createStore<T>(initialStore: T) {
 }
 ```
 
-`setSnapshot`의 파라미터로 값 대신 `setter` 함수를 전달받도록 수정하고, 새 전역 상태를 할당할 때 `produce`를 사용해 새 객체를 전달받도록 수정한다.
+`setSnapshot`의 파라미터로 상태의 값 대신 `setter` 함수를 전달받도록 수정하고, 새 전역 상태를 할당할 때 `produce`를 사용해 새 객체를 전달받도록 수정한다.
 
 변경된 `setSnapshot`의 명세는 다음과 같이 사용할 수 있다. 변경된 명세를 바탕으로 `version` 속성을 1씩 증가시키는 `increaseVersion` 함수를 재작성해보자.
 
@@ -1056,9 +1066,15 @@ export function increaseVersion() {
 
 보통의 상태 관리 라이브러리들은, 전역 상태를 변경하는 행위를 전역 상태를 선언하면서 같이 선언하곤 한다. Redux는 Action과 reducer를 선언해 특정 Action에 대한 작업을 선언해두고, Zustand의 경우에는 상태와 동일한 위치에 함수로 선언하는 방식이다.
 
-섹션의 도입부에서는, `increaseVersion` 처럼 분리하여 선언하는 것이 가독성이 좋을 것 같다고 했었다. 하지만 분리해서 선언하는 것 보단, 한 번에 묶어서 선언하는게 더 괜찮은 패턴이 아닌가 생각했다. 그래서 Zustand와 비슷하면서도, 상태와 행위는 구분하여 선언할 수 있도록 구현해보았다.
+섹션의 도입부에서는, `increaseVersion` 처럼 분리하여 선언하는 것이 가독성이 좋을 것 같다고 했었다. 하지만 분리해서 선언하는 것 보단, 한 번에 묶어서 선언하는게 더 괜찮은 패턴이 아닌가 생각했다. 이런 느낌으로 말이다.
 
-`createStore`의 첫 번째 파라미터로 초기 상태를, 두 번째 파라미터로 함수들을 정의해 받을 수 있도록 해보자.
+```ts
+const { ... } = createStore(envStore, {
+  increaseVersion: () => { ... }
+});
+```
+
+그래서 Zustand와 비슷하면서도, 상태와 행위는 구분하여 선언할 수 있도록 구현해보았다. `createStore`의 첫 번째 파라미터로 초기 상태를, 두 번째 파라미터로 함수들을 정의해 받을 수 있도록 해보자.
 
 ```ts createStore.ts
 // setSnapshot 타입 정의
@@ -1079,7 +1095,7 @@ function createStore<T, U extends FunctionMap>(
   changers: Changers<T, U>
 ) {
   ...
-  // setSnapshot 함수를 넣어, Changers의 반환값인 FunctionMap을 할당
+  // setSnapshot 함수를 넣어, Changers의 반환값인 FunctionMap 타입의 객체를 할당
   const changerObject = changers(setSnapshot);
 
   // useStoreWithSelector의 제네릭을 U에서 V로 변경
@@ -1096,15 +1112,15 @@ function createStore<T, U extends FunctionMap>(
 }
 ```
 
-전역 상태를 변경하는 함수를 `changer`라 명칭하고, `changers` 라는 함수를 두 번째 파라미터로 받도록 했다. `changer`는 `setSubscribe`에 접근해야 하는데, `setSubscribe`는 `createStore` 함수의 실행 결과로 반환된다. 그래서 `changers`를 함수 형태로 구성하고 `setSubscribe`를 파라미터로 전달해, 함수 내부에서 참조할 수 있도록 구성했다.
+전역 상태를 변경하는 함수를 `changer`라 명칭하고, `changers` 라는 함수를 두 번째 파라미터로 받도록 했다. `changer`는 `setSubscribe`에 호출해야 상태를 변경하는데, `setSubscribe`는 `createStore` 함수의 실행 결과로 반환된다. 그래서`changers`를 객체 대신 함수 형태로 구성하고 `setSubscribe`를 파라미터로 전달해 이를 호출할 수 있도록 구성했다.
 
-`changers`는 함수를 값으로 갖는 객체를 반환하도록 타입을 한정했는데, 이는 `{[functionName]: function}` 형태로 구성하여 타입과 자동 완성이 더욱 수월하게 되도록 하기 위함이다.
+`changers`는 함수를 값으로 갖는 객체를 반환하도록 타입을 한정했는데, 이는 `{ [functionName]: function }` 형태로 구성하여 타입과 자동 완성이 더욱 수월하게 되도록 하기 위함이다.
 
-`FunctionMap`의 함수 파라미터 타입이 `any`인데, 타입스크립트에서 매개변수는 역방향으로 타입이 작동하기 때문에, `unknown`으로 설정할 경우 파라미터를 정상적으로 설정할 수 없다.
+`FunctionMap`의 함수 파라미터 타입이 `any`이다. 타입스크립트에서 매개변수는 역방향으로 타입이 작동하기 때문에, `unknown`으로 설정할 경우 `changer`의 파라미터를 정의할 수 없다. 대신 `any`로 설정하면 `changer`의 파라미터를 자유롭게 정할 수 있다.
 
 `useStoreWithSelector`의 제네릭을 변경한 이유는 별 거 없는데, 개인적으로 최상단에서부터 `T->U->V` 순으로 선언하는 것을 선호하기 때문이다. 알파벳 순서로 가는 것이 찾기 쉬워서이다.
 
-코드만 보아서는 어떻게 작동하는지 잘 안보일 수 있다. 변경된 `createStore`의 명세를 사용해 `envStore`를 재정의해보자. `version`을 증감시키는 함수와, `type`을 설정하는 함수를 선언했다.
+코드만 보아서는 어떻게 작동하는지 잘 안보일 수 있다. 변경된 `createStore`의 명세를 사용해 `envStore`를 재정의해보자. `version`을 증감시키는 함수와, `type`을 설정하는 `changer` 함수를 선언했다.
 
 ```ts envStore.ts
 export const {
@@ -1114,28 +1130,28 @@ export const {
   setType,
 } = createStore(envStore, (setSnapshot) => ({
   increaseVersion: () => {
-    setter((draft) => {
+    setSnapshot((draft) => {
       draft.release.version += 1;
     });
   },
   decreaseVersion: () => {
-    setter((draft) => {
+    setSnapshot((draft) => {
       draft.release.version -= 1;
     });
   },
   setType: (next: EnvStore["type"]) => {
-    setter((draft) => {
+    setSnapshot((draft) => {
       draft.type = next;
     });
   }
 }));
 ```
 
-두 번째 파라미터로 함수를 선언하는데, `setSnapshot`을 제공해준다. 제공되는 함수를 통해 `setSnapshot`을 함수 내부에서 호출할 수 있게 된다. 이 함수는 `createStore`에서 `changers`로 명칭된 그 함수이다.
+두 번째 파라미터로 `setSnapshot`을 파라미터로 갖는 함수를 선언하는데, 이를 통해 함수 내부에서 호출할 수 있게 된다. 이 함수는 `createStore`에서 `changers`로 명칭된 그 함수이다.
 
 그래서 두 번째 파라미터인 `changers` 함수는 `setSnapshot`을 전달받아, `setSnapshot`을 호출하는 함수, 즉 상태를 변경하는 함수 `changer`를 값으로 가지는 객체를 반환하도록 구성하면 된다.
 
-이 객체는 `createStore`의 반환값에 포함되어, 해당 반환값을 통해 `changer` 함수를 읽을 수 있다. 그래서 `setSnapshot`을 호출하는 대신 미리 선언한 `increaseVersion`, `decreaseVersion`, `setType`을 호출하여 상태를 변경할 수 있게 된다.
+이 객체는 `createStore`의 반환값에 포함되어, 선언한 각 `changer` 함수를 읽을 수 있다. 그래서 `setSnapshot`을 호출하는 대신, 미리 선언한 `increaseVersion`, `decreaseVersion`, `setType`을 호출하여 상태를 변경할 수 있게 된다.
 
 이제 `EnvController`에서 `setSnapshot`을 직접 호출하는 대신, `changer`를 호출하여 상태를 변경할 수 있다.
 
@@ -1212,7 +1228,7 @@ function createStore<T, U extends FunctionMap>(
   changers: Changers<T, U>
 ) {
   let store: T = initialStore;
-  let listeners: Array<Listener<T>> = [];
+  const listeners = new Set<Listener<T>>();
 
   function getSnapshot() {
     return store;
@@ -1225,9 +1241,9 @@ function createStore<T, U extends FunctionMap>(
   }
 
   function subscribe(listener: Listener<T>) {
-    listeners.push(listener);
+    listeners.add(listener);
     return () => {
-      listeners = listeners.filter((fn) => fn !== listener);
+      listeners.delete(listener);
     };
   }
 
@@ -1305,15 +1321,28 @@ const store = someStore.getSnapshot();
 // in React Component
 const store = someStore.useStore();
 
-const store = someStore.useStoreWithSelector((store) => store.version);
+const version = someStore.useStoreWithSelector((store) => store.version);
 ```
 
 ### 마치며
 
-이 글을 작성하며 React18 부터 제공되는 `useSyncExternalStore`를 알아보았고, 이를 통해 전역 상태를 구현하고 외부 API 와의 연동해 보았다. 또한, 상태 관리 라이브러리에서 제공하는 다양한 기능들을 직접 구현해보며 상태 관리 라이브러리의 동작 원리를 어느 정도 이해할 수 있었다.
+이 글을 작성하며 React 18부터 제공되는 `useSyncExternalStore`를 알아보았고, 이를 통해 전역 상태를 구현하고 외부 API와 연동해 보았다. 또한, 상태 관리 라이브러리에서 제공하는 다양한 기능들을 직접 구현해보았다.
 
-해당 API를 들어는 봤으나 제대로 알아보가나 사용해본 적은 없었다. 사이드 프로젝트에서 상태 관리에 대한 고민을 하면서 알아보던 도중 다시 듣게 접하게 되었고, 이를 통해 어느 정도 해결할 수 있을것이라 판단했다. 그래서 API를 자세히 알아보고자 글을 작성하며 정리해 보았다.
+처음에는 Hook을 정리하며 상태 관리 모듈을 간단하게 구현해보려 했으나, 여러 기능을 추가하다 보니 생각보다 양이 많아졌다. 추가적으로 생각나는 부분들이 있는데, 글이 너무 길어지고 내용이 산으로 갈 것 같아 여기서 마무리하기로 했다. 기회가 된다면 전역 상태 관리 구현 섹션을 분리하여, 별도의 글로 작성해도 좋을 것 같다.
 
-React를 지원하는 다양한 상태 관리 라이브러리도 이 기능을 사용해 구현하지 않았을까 하는 생각이 든다. Zustand의 경우에는 실제로 `useSyncExternalStore`를 사용하고 있는 것을 확인했다.
+정리하면서 상태 관리 라이브러리의 동작 원리를 이해하는 데는 도움이 되었던 것 같다. 그리고 생각보다 쓸만한 모듈이 나와서 기분이 좋았다. 아마 조금만 더 손보면, 전역 상태 관리 라이브러리로 사용해도 괜찮을 것 같다. 물론, 성능이나 안정성은 부족할 수 있지만, 간단한 상태 관리에는 충분히 사용할 수 있을 것이다.
 
-이번 기회에 꽤 자세히 정리해볼 수 있는 좋은 기회였다고 생각한다. 다음에 간단한 전역 상태 관리나, Web API를 연동할 일이 생기면, 해당 API를 통해 시도해볼 수 있을 것 같다.
+해당 API를 들어본 적은 있으나 제대로 알아보거나 사용해 본 적은 없었다. 사이드 프로젝트에서 상태 관리에 대한 고민을 하던 중 다시 접하게 되었고, 이를 통해 어느 정도 해결할 수 있을 것이라 판단했다. 아마 React에서 사용하는 다양한 상태 관리 라이브러리도 이 기능을 사용해 구현하지 않았을까 하는 생각이 든다. Zustand의 경우에는 실제로 `useSyncExternalStore`를 사용하고 있는 것을 확인했다.
+
+이번 기회에 꽤 자세히 정리해볼 수 있는 좋은 경험이었다고 생각한다. 다음에 간단한 전역 상태 관리나 Web API를 연동할 일이 생기면 해당 API를 통해 시도해볼 수 있을 것 같다.
+
+블로그에서 사용한 코드는 [GitHub - react-global-state-without-library](https://github.com/Normaltic/react-global-state-without-library-test) 에서 확인할 수 있다.
+
+### 참고
+
+- [React 16.3 Release notes - Official Context API](https://legacy.reactjs.org/blog/2018/03/29/react-v-16-3.html?utm_source=chatgpt.com#official-context-api)
+- [Context API Legacy docs](https://legacy.reactjs.org/docs/context.html#contextprovider)
+- [useSyncExternalStore](https://react.dev/reference/react/useSyncExternalStore)
+- [useSyncExternalStoreWithSelector](https://www.npmjs.com/package/use-sync-external-store)
+- [React 18 discussion#86](https://github.com/reactwg/react-18/discussions/86)
+- [zustand/src/traditional.ts](https://github.com/pmndrs/zustand/blob/main/src/traditional.ts)
