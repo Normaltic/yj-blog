@@ -1,7 +1,7 @@
 ---
-title: useSyncLocalStorage 초안
+title: React와 localStorage를 안전하게 동기화하는 방법
 date: 2025-05-28 17:00:00
-summary: 초안
+summary: localStorage, React에서 어떻게 쓰고 계신가요?
 ---
 
 프론트엔드를 개발하다보면, 사용자 설정이나 테마 같은 페이지를 새로 고침하거나 재접속 하더라도 유지되어야 하는 정보들을 다루게 된다.
@@ -243,7 +243,7 @@ const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?
 
 `getServerSnapshot`은 서버 렌더링 전용 옵션으로, 서버 렌더링 시점의 초기 상태를 반환하는 함수다. 클라이언트와 서버에서 실행될 때 동일한 값이 반환되어야 하이드레이션이 정상적으로 수행되며, 이 함수가 제공되지 않는다면 서버 렌더링 도중 오류가 발생할 수 있다.
 
-이를 활용하면, 외부 상태를 안전하게 구독하고, React의 상태 관리 시스템과 통합하여 동기화할 수 있다. 간단하게, [공식 문서의 예제](https://ko.react.dev/reference/react/useSyncExternalStore#subscribing-to-a-browser-api) 를 살펴보자.
+이를 활용하면, 외부 상태를 안전하게 구독하고, React의 상태 관리 시스템과 통합하여 동기화할 수 있다. 간단하게, [공식 문서의 예제](https://react.dev/reference/react/useSyncExternalStore#subscribing-to-a-browser-api) 를 살펴보자.
 
 네트워크의 활성화 여부를 판단해 출력하고 싶다고 하자. 브라우저에서는 `navigator.onLine` 속성을 읽어 네트워크 연결 상태를 확인할 수 있다. 그래서 `getSnapshot`은 다음과 같이 구성하여, `navigator.onLine`의 값을 반환하도록 한다.
 
@@ -302,7 +302,7 @@ function getSnapshot<T>(key: string, initialValue: T) {
 }
 ```
 
-그런데 `localStorage` 변경은 이벤트로 감지할 수 없다(`storage`이벤트는 다른 탭에서만 발생한다). 그래서 React에서 전달하는 `callback`을 직접 관리하여, 필요할 때 호출해주어야 한다. 우선 `subscribe`함수와 특정 변수를 통해 `callback`을 관리하도록 하자.
+그런데 `localStorage` 변경은 이벤트로 감지할 수 없다(`storage`이벤트는 다른 탭으로만 발생한다). 그래서 React에서 전달하는 `callback`을 직접 관리하여, 필요할 때 호출해주어야 한다. 우선 `subscribe`함수와 특정 변수를 통해 `callback`을 관리하도록 하자.
 
 ```ts
 const listeners = new Map<string, Set<() => void>>();
@@ -470,82 +470,849 @@ function ArrayController() {
 
 그래서 브라우저의 탭을 여러 개 열어놓고 작업하는 경우, 각 탭 간에 상태가 동기화되지 않아 한 탭에서 값을 변경하더라도 다른 탭에서는 이전 값을 여전히 유지하고 있을 수 있다.
 
-이 문제를 해결하기 위해서는, 브라우저의 `storage` 이벤트를 활용할 수 있다.
+여러 탭 간의 공유를 위해서는, 이전에 언급했던 브라우저의 `storage` 이벤트를 활용할 수 있겠다.
 
 ### Window storage event
 
-// 스토리지 이벤트에 대한 설명
+브라우저는 `storage`이벤트를 제공한다. 이는 `localStorage`에 저장된 값이 변경될 때 발생하는 이벤트로, 같은 주소를 가진 다른 탭 또는 윈도우에서 `localStorage`가 변경될 때 발생한다.
 
-스토리지 이벤트는 동일 탭에는 전달되지 않고, 다른 윈도우에 전달되는 이벤트이다.
+`storage`이벤트는 다른 윈도우에서의 변경에 대해서만 발생하며, 현재 탭에서 `localStorage`를 변경하는 경우에는 발생하지 않는다. 이벤트는 `window`객체에서 발생하며, 다음과 같이 리스너를 등록하여 사용할 수 있다.
 
-이를 활용하면 다른 윈도우 끼리 통신하여, `localStorage`의 변화를 감지하고 상태를 동기화할 수 있다
+```ts
+window.addEventListener("storage", (event) => {
+  if (event instanceof StorageEvent) {
+    console.log("Storage changed:", event.key, event.oldValue, event.newValue);
+  }
+});
+```
 
-// 스토리지 코드 예제
+`storage` 이벤트는 `StorageEvent` 객체를 전달하며, 이 객체는 변경된 키(`key`), 이전 값(`oldValue`), 새 값(`newValue`) 등을 포함한다. 해당 이벤트를 통해 다른 탭에서 `localStorage`가 변경되었을 때 변화를 감지할 수 있다.
 
-// 작동 예제
+이를 활용하여, `localStorage`의 변화를 감지하고 상태를 동기화 해보자. 글의 처음에 작성했던 `useLocalStorage.tsx`를 확장하여, 다음과 같은 코드를 추가한다.
 
-### useSyncLocalStorage
+```tsx
+useEffect(() => {
+  const handleStorageChange = (event: StorageEvent) => {
+    if (event.key !== key || !event.newValue) return;
+    try {
+      setValue(JSON.parse(event.newValue));
+    } catch (error) {
+      console.error(`Cannot parse ${key} of localStorage:`, error);
+    }
+  };
 
-앞 섹션들에서 다루었던 useSyncExternalStore와 storage이벤트를 활용한다면, 컴포넌트들 뿐만 아니라 다른 윈도우 사이에서도 동기화를 진행할 수 있겠다.
+  window.addEventListener("storage", handleStorageChange);
+  return () => {
+    window.removeEventListener("storage", handleStorageChange);
+  };
+}, [key]);
+```
 
-이를 합쳐서 구현해보자
+<details>
 
-// 합쳐서 구현한 코드
+<summary>`useLocalStorageWithListener.tsx` 전체 코드</summary>
 
-// 작동 예제
+```tsx useLocalStorageWithListener.tsx
+// !line-numbers
+import { useCallback, useEffect, useState } from "react";
+
+function getLocalStorageItem<T>(key: string, initialValue: T): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : initialValue;
+  } catch (error) {
+    console.error(`Cannot parse ${key} of localStorage:`, error);
+    return initialValue;
+  }
+}
+
+function useLocalStorageWithListener<T>(key: string, initialValue: T) {
+  const [value, setValue] = useState<T>(getLocalStorageItem(key, initialValue));
+
+  const setter = useCallback(
+    (next: T | ((value: T) => T)) => {
+      try {
+        const newValue = next instanceof Function ? next(value) : next;
+        window.localStorage.setItem(key, JSON.stringify(newValue));
+        setValue(newValue);
+      } catch (error) {
+        console.error(`Cannot setting ${key} of localStorage:`, error);
+      }
+    },
+    [key, value]
+  );
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      try {
+        setValue(JSON.parse(event.newValue));
+      } catch (error) {
+        console.error(`Cannot parse ${key} of localStorage:`, error);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [key]);
+
+  return [value, setter] as const;
+}
+
+export default useLocalStorageWithListener;
+```
+
+</details>
+
+`storage` 이벤트를 읽고, 해당 키가 현재 Hook에서 사용하는 키와 일치하는 경우에만 상태를 업데이트하도록 했다. 이로 인해 다른 탭에서 `localStorage`의 값이 변경되면, 현재 탭에서도 이를 감지하고 상태를 업데이트할 수 있게 된다.
+
+![사진 6) Sharing update with storage event](../images/enhanced_use_sync_local_storage/sharing_update_with_multiple_tab.gif)
+
+왼쪽 탭에서 값을 변경하면 오른쪽 탭의 상태가 동기화 되는것을 볼 수 있다. 하지만 동일 탭에서는 `storage` 이벤트가 발생하지 않기 때문에, 현재 탭에서 값을 변경해도 다른 컴포넌트의 상태는 업데이트 되지 않는다.
+
+정리하자면, `storage` 이벤트는 동일한 탭에서는 발생하지 않지만, 다른 탭으로 이벤트를 전파해 동기화를 가능하게 해준다. 이를 활용하면 `localStorage`가 변경될 때 멀티 탭 환경에서 상태를 일관되게 만들 수 있다.
+
+### useSyncLocalStorage 구현
+
+이전 섹션들에서 `useSyncExternalStore`와 `storage` 이벤트를 다루었다. `useSyncExternalStore`는 동일 탭에서의 `localStorage`의 상태를 안전하게 동기화할 수 있도록 해주며, `storage` 이벤트는 다른 탭에서의 `localStorage` 변경을 감지하여 상태를 동기화할 수 있게 해준다.
+
+이 둘을 결합한다면 컴포넌트들 뿐만 아니라 다른 윈도우 사이에서도 동기화를 진행할 수 있게 된다. 즉, `localStorage`의 상태를 React와 안전하게 동기화하고, 컴포넌트와 탭 사이의 상태를 동기화하는 Hook을 구현할 수 있다.
+
+앞서 구현한 기능들을 기반으로 `localStorage`와 React를 안전하게 동기화하고, 컴포넌트와 탭 간의 상태를 공유하는 `useSyncLocalStorage` Hook을 구현해보자.
+
+#### 핵심 동기화 기능 구현
+
+먼저 `localStorage`의 값을 구독하고, React와 안전하게 동기화 해야 한다. 앞서 구현했던 `useLocalStorageWithExternalStore`을 참고하여, `useSyncLocalStorage` Hook을 작성해보자.
+
+이전에 작성했던 `useLocalStorageWithExternalStore`는 이미 React와의 동기화를 잘 수행하고 있으므로, 코드는 동일하게 사용하면 된다.
+
+<details>
+<summary>`useSyncLocalStorage.tsx` 코드</summary>
+
+```tsx useSyncLocalStorage.tsx
+// !line-numbers
+import { useCallback, useEffect, useSyncExternalStore } from "react";
+
+function getLocalStorageItem<T>(key: string, initialValue: T): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    return item ? JSON.parse(item) : initialValue;
+  } catch (error) {
+    console.error(`Cannot parse ${key} of localStorage:`, error);
+    return initialValue;
+  }
+}
+
+const listeners = new Map<string, Set<() => void>>();
+
+function getSnapshot<T>(
+  key: string,
+  initialValue: T,
+  isEqual: (a: T, b: T) => boolean
+): () => T {
+  let prevItem = getLocalStorageItem(key, initialValue);
+
+  function memoizingGetSnapshot(): T {
+    const nextItem = getLocalStorageItem(key, initialValue);
+    if (isEqual(prevItem, nextItem) === false) {
+      prevItem = nextItem;
+    }
+    return prevItem;
+  }
+
+  return memoizingGetSnapshot;
+}
+
+function setSnapshot<T>(key: string, value: T): void {
+  try {
+    window.localStorage.setItem(key, JSON.stringify(value));
+    const keyListeners = listeners.get(key);
+    keyListeners?.forEach((listener) => listener());
+  } catch (error) {
+    console.error(`Cannot setting ${key} of localStorage:`, error);
+  }
+}
+
+function subscribe(key: string, listener: () => void): () => void {
+  if (!listeners.has(key)) listeners.set(key, new Set());
+  const keyListeners = listeners.get(key)!;
+  keyListeners.add(listener);
+
+  return () => {
+    keyListeners.delete(listener);
+  };
+}
+
+function useSyncLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  isEqual: (a: T, b: T) => boolean = (a, b) => a === b
+) {
+  const memoizedSubscriber = useCallback(
+    (cb: () => void) => subscribe(key, cb),
+    [key]
+  );
+
+  const value = useSyncExternalStore(
+    memoizedSubscriber,
+    getSnapshot(key, initialValue, isEqual)
+  );
+
+  const setter = useCallback(
+    (next: T | ((value: T) => T)) => {
+      const newValue = next instanceof Function ? next(value) : next;
+      setSnapshot(key, newValue);
+    },
+    [key, value]
+  );
+
+  return [value, setter] as const;
+}
+
+export default useSyncLocalStorage;
+```
+
+</details>
+
+다음, 탭 간의 동기화는 `storage` 이벤트를 통해 수행 가능하다고 했다. 앞에서 구현했던 `useLocalStorageWithExternalStore`를 이전 섹션을 참고해서, `storage` 이벤트를 리스닝하여 다른 탭에서의 변경도 감지하도록 코드를 추가하자.
+
+```tsx
+// !line-numbers 75
+ ...
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      try {
+        setter(JSON.parse(event.newValue));
+      } catch (error) {
+        console.error(`Cannot parse ${key} of localStorage:`, error);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [key, setter]);
+  ...
+```
+
+마찬가지로 `storage` 이벤트를 읽고, 해당 키가 현재 Hook에서 사용하는 키와 일치한 경우 `setter`를 호출하여 상태를 업데이트 하도록 했다.
+
+이 경우 `setSnapshot`을 호출하며 `callback`들을 실행시켜 동일한 탭의 다른 컴포넌트들에게 상태가 변경되었음을 전달하며, `localStorage`를 변경하며 이벤트를 전파할 것이다. 그러면 다른 탭에서 해당 이벤트를 리스닝하고 있던 Hook들이 상태가 업데이트 되며 동기화 될 것이다.
+
+![사진 7) Sharing update with useSyncLocalStorage](../images/enhanced_use_sync_local_storage/sharing_update_with_general.gif)
 
 이제 `localStorage`와 상태를 안전하게 동기화 하고, Hook을 사용하는 컴포넌트들 뿐만 아니라 브라우저의 탭들 사이에서도 동기화가 잘 이루어지는 Hook이 되었다.
 
-### 추가 구현
+여기서 마무리해도 되지만, 추가로 유틸적인 기능을 제공하여 더 유용한 Hook이 되도록 만들어보자.
 
-현재 `useSyncLocalStorage`는 동기화 기능을 제공한다. 여기에 추가적인 기능을 제공하여 더 유용하게 만들어보자.
+#### 타입 가드
 
-#### 타입가드
+`localStorage`에 저장되는 값은 문자열로, `JSON.stringify`를 통해 직렬화되어 저장된다. 그리고 해당 값을 읽을 때에는 `JSON.parse`를 통해 역직렬화된다.
 
-로컬 스토리지에 저장되는 값은 문자열이고, JSON.parse가 반환하는 결과물은 any타입이다. 그래서 타입이 안정적이지 않다.
+하지만, `JSON.parse`의 경우 결과물의 타입이 `any`로 반환되기 때문에, Typescript 환경에서는 `localStorage`를 사용할 때 타입 안정성을 보장하기 어렵다.
 
-타입 가드를 넣어 안정적으로 사용할 수 있도록 해보자.
+```ts
+const item: SomeObject = {
+  key: "string",
+  value: 123
+};
+localStorage.setItem("item", JSON.stringify(item));
+const parsedItem = JSON.parse(localStorage.getItem("item")!); // parsedItem의 타입은 any
+console.log(parsedItem.notExist); // 타입 에러가 발생하지 않음
+```
 
-// 타입 가드 코드
+그래서 타입 단언으로 덮어씌워 타입 시스템을 우회하거나, 별도의 타입 가드를 통해 검증하여 타입 안정성을 확보해야 한다.
 
-타입 검증에 실패하면 `console.error`를 출력하도록 했다. `localStorage`는 사용자가 직접 값을 수정할 수도 있기 때문에, 무작정 `Error`를 발생시키기 보다는 메세지를 출력하고, 기본 값을 반환하도록 했다.
+```ts
+function isSomeObject(item: unknown): item is SomeObject { ... }
+if (isSomeObject(parsedItem)) {
+  console.log(parsedItem.notExist); // 타입 에러가 발생함
+}
+```
 
-그래서 `localStorage`에서 불러올 때에는 타입 검증에 실패하면 기본 값을 반환하도록 하고, `storage`이벤트로 전달 되는 값은 타입 검증에 실패하면 기존 컴포넌트의 상태를 반환하도록 한다.
+앞서 구현한 `useSyncLocalStorage` Hook은 `getLocalStorageItem` 함수를 통해 값을 읽어오는데, `JSON.parse`의 결과를 그대로 반환하며 함수의 반환 타입은 `T`로 선언하고 있다. 이는 타입 체커에게 반환 타입이 `T`라고 알려주어, 사실상 타입 단언과 유사한 역할을 수행하고 있다. 이는 타입 안정성을 보장하지 못하며, 실제 결과물은 `T`와 다를 수 있다.
 
-타입 검증에 실패하면 에러를 출력하는 것을 확인할 수 있다.
+따라서, `localStorage`에서 읽은 값이 실제로 `T` 타입인지 검증해야, 타입 안정성을 확보하고 에러를 방지할 수 있다. 이를 위해 타입 가드를 추가하여, `localStorage`에서 읽은 값이 예상한 타입인지 검증하는 로직을 구현하자.
 
-// 작동 예제
+우선, 추가적인 옵션을 위해 `isEqual` 함수를 포함한 타입을 선언한다.
 
-이제 타입가드를 통해 `localStorage`에서 반환되는 값의 타입을 신뢰할 수 있게 되었다.
+```ts
+export type IsEqual<T> = (a: T, b: T) => boolean;
+export type Typeguard<T> = (value: unknown) => value is T;
+
+interface UseSyncLocalStorageOptions<T> {
+  isEqual?: IsEqual<T>;
+  typeguard?: Typeguard<T>;
+}
+```
+
+그리고 `getLocalStorageItem` 함수에 `typeguard`를 추가하여, 값을 읽어올 때 타입 검증을 수행하도록 한다.
+
+```ts
+function getLocalStorageItem<T>(
+  key: string,
+  initialValue: T,
+  typeguard: Typeguard<T>
+): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    if (item === null) return initialValue;
+    const parsedItem = JSON.parse(item);
+    if (!typeguard(parsedItem)) {
+      throw new Error(`Typeguard failed for key: ${key}, value: ${parsedItem}`);
+    }
+    return parsedItem;
+  } catch (error) {
+    console.error(`Cannot parse ${key} of localStorage:`, error);
+    return initialValue;
+  }
+}
+```
+
+우선 `localStorage`에서 값을 읽어와, `null`인 경우 초기 값을 반환하도록 한다. 첫 접속 시 실제로 값이 비어있을 수 있기 때문이다. 그리고 `JSON.parse`를 수행하여 변환하고, `typeguard`를 통해 타입 검증을 수행한다. 타입 검증에 실패하면 에러를 발생시키도록 했다.
+
+타입 검증이 실패할 경우에도 역시 초기 값을 반환하도록 지정했다. `localStorage`는 사용자가 직접 조작하여 예상치 못한 값이 저장되어 있을 수 있기 때문이다. 그래서 실패 시 초기 값을 반환하여 안정성을 확보할 수 있도록 했다.
+
+수정된 `getLocalStorageItem` 명세를 반영하기 위해, `getSnapshot` 함수와 `useSyncLocalStorage` 훅을 수정하자.
+
+```ts
+function getSnapshot<T>(
+  key: string,
+  initialValue: T,
+  isEqual: IsEqual<T>,
+  typeguard: Typeguard<T>
+): () => T {
+  let prevItem = getLocalStorageItem(key, initialValue, typeguard);
+
+  function memoizingGetSnapshot(): T {
+    const nextItem = getLocalStorageItem(key, initialValue, typeguard);
+    ...
+  }
+  ...
+}
+```
+
+```ts
+function defaultIsEqual<T>(a: T, b: T): boolean {
+  return a === b;
+}
+
+function defaultTypeguard<T>(_: unknown): _ is T {
+  return true;
+}
+
+function useSyncLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options?: UseSyncLocalStorageOptions<T>
+) {
+  const isEqualRef = useRef(options?.isEqual ?? defaultIsEqual);
+  const typeguardRef = useRef(options?.typeguard ?? defaultTypeguard);
+  ...
+  const value = useSyncExternalStore(
+    memoizedSubscriber,
+    getSnapshot(
+      key,
+      initialValueRef.current,
+      isEqualRef.current,
+      typeguardRef.current
+    )
+  );
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      try {
+        const parsedValue = JSON.parse(event.newValue);
+        if (!typeguardRef.current(parsedValue)) {
+          throw new Error(
+            `Typeguard failed for key: ${key}, value: ${parsedValue}`
+          );
+        }
+        setter(key, parsedValue);
+      } catch (error) {
+        console.error(`Cannot parse ${key} of localStorage:`, error);
+      }
+    };
+    ...
+  }, [key, setter]);
+  ...
+}
+```
+
+옵션을 묶어 세 번째 파라미터로 전달 받도록 하고, 각 옵션을 `useRef`를 통해 참조하도록 했다. 이렇게 하면 밖에서 memoization되지 않은 함수를 전달해도, 처음 전달된 함수를 호출할 수 있게 된다.
+
+그리고 `getSnapshot` 함수에 `typeguard`를 추가로 전달하도록 하고, `storage`이벤트 핸들러에서도 `typeguard`를 사용하여, 이벤트를 통해 전달받은 값이 올바른 타입인지 검증하도록 했다.
+
+이제 `localStorage` 읽거나 이벤트를 통해 받은 값에 대해서, 전달받은 `typeguard` 함수를 통해 타입 검증을 수행한다.
+
+```tsx ArrayController.tsx
+function isArrayEqual<T>(a: T[], b: T[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every((item, index) => item === b[index]);
+}
+
+function ArrayController() {
+  const [array, setArray] = useSyncLocalStorage<string[]>(
+    "stringArray",
+    [],
+    {
+      isEqual: isArrayEqual,
+      typeguard: (value) => {
+        return (
+          Array.isArray(value) &&
+          value.every((item) => typeof item === "string")
+        );
+      }
+    }
+  );
+  ...
+}
+```
+
+만약, `stringArray`에 `string[]` 타입이 아닌 값이 저장되면, `typeguard`를 통한 검증에 실패하여 에러가 발생하게 된다.
+
+```ts
+localStorage.setItem("stringArray", "[1, 2, 3]");
+```
+
+![사진 8) Typeguard failed](../images/enhanced_use_sync_local_storage/cannot_parse_key_of_local_storage_error.png)
+
+이제 `useSyncLocalStorage` 훅을 사용할 때, 타입 가드를 전달하여 `localStorage`에서 반환되는 값의 타입을 신뢰할 수 있게 되었다.
 
 #### serialize, deserialize
 
-Map, Set 같은 클래스는 stringify를 하면 빈 객체(`'{}'`)가 된다. 그리고 `toString`을 하면 `'[object Map]'` 같은 문자열이 된다. 그래서 JSON.stringify를 사용하면 제대로 직렬화되지 않고, 그 상태로 JSON.parse를 하면 원본 자료형을 복원할 수 없다.
+개발을 할 때에는 단순한 자료형부터, 객체나 배열, `Map`등 다양한 자료형을 `localStorage`에 저장하고 불러와야 할 때가 있다. 하지만, `localStorage`는 문자열만 저장할 수 있기 때문에, 객체나 배열을 저장하려면 직렬화가 필요하다.
 
-이를 해결하기 위해, serialize와 deserialize 옵션을 제공하여 다양한 자료형을 지원할 수 있도록 하자.
+그러나 `Map`, `Set` 같은 클래스는 `JSON.stringify`를 하면 빈 객체(`'{}'`)가 된다. 그리고 `toString` 메서드를 사용하면 `'[object Map]'` 같은 문자열이 된다. 그래서 `JSON.stringify`를 사용하면 데이터가 손상되고, 그 상태로 `JSON.parse`를 수행하면 원본 자료형을 복원할 수 없다.
 
-// serialize, deserialize 코드
+```ts
+const map = new Map([["key", "value"]]);
+console.log(JSON.stringify(map)); // '{}'
+console.log(JSON.parse(JSON.stringify(map))); // {}
+```
 
-// 작동 코드
+그래서 `localStorage`에 저장할 때에 별도의 작업을 수행하여, 데이터를 저장하고 복원하는 작업을 수행한다. 예로, `Map`을 저장하고 복원할 때에는 아래와 같은 작업을 수행할 수 있다.
 
-이를 통해, 이제 기본 자료형 뿐 아니라 Map, Set, Date 등 다양한 자료형을 `localStorage`에 저장하고 불러올 수 있게 되었다.
+```ts
+const map = new Map([["key", "value"]]);
+const serializedMap = JSON.stringify(Array.from(map.entries()));
+const deserializedMap = new Map(JSON.parse(serializedMap));
+```
+
+`Map`의 `entries()` 메서드를 사용하여 배열로 변환하고, 이를 `JSON.stringify`를 통해 직렬화한다. 그리고 `JSON.parse`를 통해 역직렬화한 후, 다시 `Map`으로 변환한다. 이런 방식으로 다양한 자료형이나 커스텀 클래스를 `localStorage`에 저장하고 불러올 수 있다.
+
+`useSyncLocalStorage` Hook에 `serializer`와 `deserializer` 옵션을 추가하여, 다양한 자료형을 지원할 수 있도록 하자.
+
+```ts
+export type Serializer<T> = (value: T) => string;
+export type Deserializer<T> = (value: string) => T;
+
+export interface UseSyncLocalStorageOptions<T> {
+  ...
+  serializer?: Serializer<T>;
+  deserializer?: Deserializer<T>;
+}
+```
+
+`Serializer`와 `Deserializer` 타입을 선언하고 옵션에 `serializer`와 `deserializer`를 추가했다. 그리고 `getLocalStorageItem`에서 `localStorage`의 값을 읽어올 때 `deserializer`를 사용하도록 하고, `setSnapshot`에서는 `serializer`를 사용하여 값을 직렬화해 저장하도록 한다.
+
+```ts
+function getLocalStorageItem<T>(
+  key: string,
+  initialValue: T,
+  typeguard: Typeguard<T>,
+  deserializer: Deserializer<T>
+): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    if (item === null) return initialValue;
+    const parsedItem = deserializer(item);
+    ...
+  } catch (error) {
+    ...
+  }
+}
+```
+
+```ts
+function setSnapshot<T>(
+  key: string,
+  value: T,
+  serializer: Serializer<T>
+): void {
+  try {
+    const serialized = serializer(value);
+    window.localStorage.setItem(key, serialized);
+    ...
+  } catch (error) {
+    ...
+  }
+}
+```
+
+그리고 변경된 `getLocalStorageItem`과 `setSnapshot`의 명세를 `getSnapshot`과 `useSyncLocalStorage` Hook에 반영하자.
+
+```ts
+function getSnapshot<T>(
+  ...
+  deserializer: Deserializer<T>
+): () => T {
+  let prevItem = getLocalStorageItem(
+    ...
+    deserializer
+  );
+
+  function memoizingGetSnapshot(): T {
+    const nextItem = getLocalStorageItem(
+      ...
+      deserializer
+    );
+    ...
+  }
+
+  return memoizingGetSnapshot;
+}
+```
+
+`getSnapshot` 함수는 직접 호출하지는 않기 때문에, `deserializer`만 추가로 전달하도록 수정했다.
+
+```ts
+
+function defaultSerializer<T>(value: T): string {
+  return JSON.stringify(value);
+}
+
+function defaultDeserializer<T>(value: string): T {
+  return JSON.parse(value);
+}
+
+function useSyncLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options?: UseSyncLocalStorageOptions<T>
+) {
+  ...
+  const serializerRef = useRef(options?.serializer ?? defaultSerializer);
+  const deserializerRef = useRef(options?.deserializer ?? defaultDeserializer);
+  ...
+  const value = useSyncExternalStore(
+    memoizedSubscriber,
+    getSnapshot(
+      ...
+      deserializerRef.current
+    )
+  );
+
+  const setter = useCallback(
+    (next: T | ((value: T) => T)) => {
+      const newValue = next instanceof Function ? next(value) : next;
+      setSnapshot(key, newValue, serializerRef.current);
+    },
+    [key, value]
+  );
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      try {
+        const deserializedValue = deserializerRef.current(event.newValue);
+        ...
+        setter(deserializedValue);
+      } catch (error) {
+        ...
+      }
+    };
+    ...
+  }, [key, setter]);
+  ...
+}
+```
+
+`serializer`와 `deserializer`의 기본 함수를 정의하고, `serializer`와 `deserializer` 역시 `useRef`를 통해 참조하도록 했다.
+
+그리고 `getSnapshot`과 `setSnapshot`에 전달하여 사용할 수 있도록 수정하고, `storage` 이벤트 핸들러에서도 `deserializer`를 사용하여 값을 역직렬화하도록 했다.
+
+이제 `useSyncLocalStorage` 훅을 사용할 때, `serializer`와 `deserializer`를 사용하여 직렬화와 역직렬화를 직접 정의할 수 있게 된다.
+
+```tsx
+function MapController() {
+  const [value, setValue] = useSyncLocalStorage(
+    "stringNumberMap",
+    new Map<string, number>(),
+    {
+      isEqual: (a, b) => {
+        if (a.size !== b.size) return false;
+        return Array.from(a.keys()).every(
+          (key) => b.has(key) && a.get(key) === b.get(key)
+        );
+      },
+      serializer: (map) => {
+        const obj = Object.fromEntries(map);
+        return JSON.stringify(obj);
+      },
+      deserializer: (str) => {
+        const obj = JSON.parse(str);
+        return new Map(Object.entries(obj));
+      }
+    }
+  );
+
+  const setMapValue = () => {
+    setValue((prev) => {
+      const size = prev.size;
+      return new Map(prev).set(`${size}`, size);
+    });
+  };
+
+  const removeMapValue = () => {
+    setValue((prev) => {
+      const size = prev.size;
+      const next = new Map(prev);
+      const result = next.delete(`${size - 1}`);
+      return result ? next : prev;
+    });
+  };
+
+  return (
+    <div>
+      <h1>Map Controller</h1>
+      <button onClick={() => setMapValue()}>Add Item</button>
+      <button onClick={() => removeMapValue()}>Remove Item</button>
+      <pre>{JSON.stringify(Object.fromEntries(value))}</pre>
+    </div>
+  );
+}
+```
+
+`serializer`와 `deserializer`를 사용하여 `Map`을 직렬화하고 역직렬화하는 방법을 정의하여, `Map`객체를 `localStorage`에 저장하고, `Map`의 값을 추가하거나 제거하는 컴포넌트를 작성했다.
+
+`Map`의 `entries()` 메서드를 사용하여 배열로 변환하고 `JSON.stringify`를 통해 직렬화한다. 그리고 역직렬화할 때에는 `JSON.parse`를 통해 배열로 변환한 후, 다시 `Map`으로 변환한다.
+
+![사진 9) Map Controller](../images/enhanced_use_sync_local_storage/map_in_local_storage.gif)
+
+해당 구현으로, 이제 `serializer`와 `deserializer`를 통해 기본 자료형 뿐 아니라 `Map`, `Set`, `Date` 등 다양한 자료형을 `localStorage`에 저장하고 불러올 수 있게 되었다.
 
 ### 결과
 
-지금까지 구현한 `useSyncLocalStorage` 훅의 기능 명세는 다음과 같다:
+지금까지 구현한 `useSyncLocalStorage` 훅의 최종 기능 명세는 다음과 같다.
 
-- 기능1
-- 기능2
-- 기능3
-- 기능4
+- `localStorage`와 React 상태를 안전하게 결합하여 컴포넌트간 상태 동기화
+- 브라우저의 `storage` 이벤트를 통해 다른 탭과 상태 동기화
+- `isEqual` 함수를 통해 상태 변경 여부를 결정하여 불필요한 리렌더링 방지
+- 타입 안정성을 보장하는 `typeguard` 기능
+- `Map`, `Set`, 커스텀 클래스 등 다양한 자료형을 지원하는 직렬화 및 역직렬화 기능
 
 `useSyncLocalStorage` 전체 코드는 이렇게 구성되었다.
 
-// useSyncLocalStorage 전체 코드
+```tsx useSyncLocalStorage.tsx
+// !line-numbers
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
-이는 다음과 같은 방식으로 사용할 수 있게 되었다.
+export type IsEqual<T> = (a: T, b: T) => boolean;
+export type Typeguard<T> = (value: unknown) => value is T;
+export type Serializer<T> = (value: T) => string;
+export type Deserializer<T> = (value: string) => T;
 
-// 사용 방법
+export interface UseSyncLocalStorageOptions<T> {
+  isEqual?: IsEqual<T>;
+  typeguard?: Typeguard<T>;
+  serializer?: Serializer<T>;
+  deserializer?: Deserializer<T>;
+}
+
+function getLocalStorageItem<T>(
+  key: string,
+  initialValue: T,
+  typeguard: Typeguard<T>,
+  deserializer: Deserializer<T>
+): T {
+  try {
+    const item = window.localStorage.getItem(key);
+    if (item === null) return initialValue;
+    const parsedItem = deserializer(item);
+    if (!typeguard(parsedItem)) {
+      throw new Error(`Typeguard failed for key: ${key}, value: ${parsedItem}`);
+    }
+    return parsedItem;
+  } catch (error) {
+    console.error(`Cannot parse ${key} of localStorage:`, error);
+    return initialValue;
+  }
+}
+
+const listeners = new Map<string, Set<() => void>>();
+
+function getSnapshot<T>(
+  key: string,
+  initialValue: T,
+  isEqual: IsEqual<T>,
+  typeguard: Typeguard<T>,
+  deserializer: Deserializer<T>
+): () => T {
+  let prevItem = getLocalStorageItem(
+    key,
+    initialValue,
+    typeguard,
+    deserializer
+  );
+
+  function memoizingGetSnapshot(): T {
+    const nextItem = getLocalStorageItem(
+      key,
+      initialValue,
+      typeguard,
+      deserializer
+    );
+    if (isEqual(prevItem, nextItem) === false) {
+      prevItem = nextItem;
+    }
+    return prevItem;
+  }
+
+  return memoizingGetSnapshot;
+}
+
+function setSnapshot<T>(
+  key: string,
+  value: T,
+  serializer: Serializer<T>
+): void {
+  try {
+    const serialized = serializer(value);
+    window.localStorage.setItem(key, serialized);
+    const keyListeners = listeners.get(key);
+    keyListeners?.forEach((listener) => listener());
+  } catch (error) {
+    console.error(`Cannot setting ${key} of localStorage:`, error);
+  }
+}
+
+function subscribe(key: string, listener: () => void): () => void {
+  if (!listeners.has(key)) listeners.set(key, new Set());
+  const keyListeners = listeners.get(key)!;
+  keyListeners.add(listener);
+
+  return () => {
+    keyListeners.delete(listener);
+  };
+}
+
+function defaultIsEqual<T>(a: T, b: T): boolean {
+  return a === b;
+}
+
+function defaultTypeguard<T>(_: unknown): _ is T {
+  return true;
+}
+
+function defaultSerializer<T>(value: T): string {
+  return JSON.stringify(value);
+}
+
+function defaultDeserializer<T>(value: string): T {
+  return JSON.parse(value);
+}
+
+function useSyncLocalStorage<T>(
+  key: string,
+  initialValue: T,
+  options?: useSyncLocalStorageOptions<T>
+) {
+  const isEqualRef = useRef(options?.isEqual ?? defaultIsEqual);
+  const typeguardRef = useRef(options?.typeguard ?? defaultTypeguard);
+  const serializerRef = useRef(options?.serializer ?? defaultSerializer);
+  const deserializerRef = useRef(options?.deserializer ?? defaultDeserializer);
+
+  const memoizedSubscriber = useCallback(
+    (cb: () => void) => subscribe(key, cb),
+    [key]
+  );
+
+  const value = useSyncExternalStore(
+    memoizedSubscriber,
+    getSnapshot(
+      key,
+      initialValue,
+      isEqualRef.current,
+      typeguardRef.current,
+      deserializerRef.current
+    )
+  );
+
+  const setter = useCallback(
+    (next: T | ((value: T) => T)) => {
+      const newValue = next instanceof Function ? next(value) : next;
+      setSnapshot(key, newValue, serializerRef.current);
+    },
+    [key, value]
+  );
+
+  useEffect(() => {
+    const handleStorageChange = (event: StorageEvent) => {
+      if (event.key !== key || !event.newValue) return;
+      try {
+        const deserializedValue = deserializerRef.current(event.newValue);
+        if (!typeguardRef.current(deserializedValue)) {
+          throw new Error(
+            `Typeguard failed for key: ${key}, value: ${deserializedValue}`
+          );
+        }
+        setter(deserializedValue);
+      } catch (error) {
+        console.error(`Cannot parse ${key} of localStorage:`, error);
+      }
+    };
+
+    window.addEventListener("storage", handleStorageChange);
+    return () => {
+      window.removeEventListener("storage", handleStorageChange);
+    };
+  }, [key, setter]);
+
+  return [value, setter] as const;
+}
+
+export default useSyncLocalStorage;
+```
+
+해당 Hook은 다음과 같은 방식으로 사용이 가능하다.
+
+```tsx
+import useSyncLocalStorage from "./useSyncLocalStorage";
+
+function SetController() {
+  const [setValue, setSetValue] = useSyncLocalStorage(
+    "stringSet", // localStorage 키
+    new Set<string>(), // 초기값
+    {
+      isEqual: (a, b) => {
+        // 동등성 비교 함수
+        return a.size === b.size && Array.from(a).every((item) => b.has(item));
+      },
+      typeguard: (value): value is Set<string> => {
+        // 타입 가드 함수
+        return (
+          value instanceof Set &&
+          Array.from(value).every((item) => typeof item === "string")
+        );
+      },
+      serializer: (set) => {
+        // 직렬화하는 함수
+        return JSON.stringify(Array.from(set));
+      },
+      deserializer: (str) => {
+        // 역직렬화하는 함수
+        new Set(JSON.parse(str));
+      }
+    }
+  );
+}
+```
 
 ### 마무리
 
@@ -556,3 +1323,10 @@ Map, Set 같은 클래스는 stringify를 하면 빈 객체(`'{}'`)가 된다. �
 이 글을 통해 `localStorage`를 React의 상태와 안전하게 동기화하고, 컴포넌트와 탭 사이의 상태를 동기화하는 방법을 알아보았다. 또한, 추가적인 기능을 제공하는 `useSyncLocalStorage` 훅을 구현하여 다양한 자료형을 지원할 수 있게 되었다.
 
 이전 글에서도 그랬는데, 생각보다 괜찮은 결과물이 나오게 되었다고 생각한다. 다음에 `localStorage`를 사용할 일이 있다면, 이 글의 경험을 바탕으로 해당 Hook을 활용할 수 있는 기회가 있으면 좋겠다.
+
+블로그에서 사용한 코드들은 [GitHub - use-sync-localstorage](https://github.com/Normaltic/use-sync-localstorage)에서 확인할 수 있다.
+
+### 참고
+
+- [useSyncExternalStore](https://react.dev/reference/react/useSyncExternalStore)
+- [외부 라이브러리 없이 React의 전역 상태 관리하기](https://blog.yunji.kim/react_global_state_without_library)
