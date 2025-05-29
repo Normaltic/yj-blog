@@ -48,7 +48,7 @@ function Codeblock({ codeblock }: CodeblockProps) {
   );
 
   if (lineNumber) {
-    handler.push(lineNumbers(+lineNumber.query));
+    handler.push(lineNumbers(+(lineNumber.query || 1)));
   }
 
   if (codeblock.meta) {
