@@ -435,14 +435,21 @@ function useLocalStorageWithExternalStore<T>(
   initialValue: T,
   isEqual: (a: T, b: T) => boolean = (a, b) => a === b
 ) {
+  const initialValueRef = useRef(initialValue);
+  const isEqualRef = useRef(isEqual);
   ...
-  const value = useSyncExternalStore(
-    memoizedSubscriber,
-    getSnapshot(key, initialValue, isEqual)
-  );
+  const memoizedGetSnapshot = useMemo(() => {
+    return getSnapshot(key, initialValueRef.current, isEqualRef.current);
+  }, [key]);
+
+  const value = useSyncExternalStore(memoizedSubscriber, memoizedGetSnapshot);
   ...
 }
 ```
+
+`getSnapshot`함수의 실행 결과인 함수를 `useMemo`로 memoization한다. 클로저를 사용해 외부 함수의 변수를 참조하는데, 매번 실행할 경우 지역 변수(`prevItem`)가 매번 초기화 되기 때문이다. 그리고 이 함수를 `useSyncExternalStore`에 `getSnapshot` 역할을 하도록 전달한다.
+
+`initialValue`와 `isEqual`을 `useRef`를 통해 참조하도록 했다. 이렇게 하면 밖에서 memoization 하지 않고 전달하더라도, 처음 전달되는 값을 참조할 수 있게 되어 매번 새로운 참조값이 되는 것을 방지할 수 있다.
 
 ```tsx ArrayController.tsx
 function isArrayEqual<T>(a: T[], b: T[]): boolean {
@@ -593,7 +600,7 @@ export default useLocalStorageWithListener;
 
 ```tsx useSyncLocalStorage.tsx
 // !line-numbers
-import { useCallback, useEffect, useSyncExternalStore } from "react";
+import { useRef, useCallback, useSyncExternalStore } from "react";
 
 function getLocalStorageItem<T>(key: string, initialValue: T): T {
   try {
@@ -650,15 +657,19 @@ function useSyncLocalStorage<T>(
   initialValue: T,
   isEqual: (a: T, b: T) => boolean = (a, b) => a === b
 ) {
+  const initialValueRef = useRef(initialValue);
+  const isEqualRef = useRef(isEqual);
+
   const memoizedSubscriber = useCallback(
     (cb: () => void) => subscribe(key, cb),
     [key]
   );
 
-  const value = useSyncExternalStore(
-    memoizedSubscriber,
-    getSnapshot(key, initialValue, isEqual)
-  );
+  const memoizedGetSnapshot = useMemo(() => {
+    return getSnapshot(key, initialValueRef.current, isEqualRef.current);
+  }, [key]);
+
+  const value = useSyncExternalStore(memoizedSubscriber, memoizedGetSnapshot);
 
   const setter = useCallback(
     (next: T | ((value: T) => T)) => {
@@ -810,19 +821,19 @@ function useSyncLocalStorage<T>(
   initialValue: T,
   options?: UseSyncLocalStorageOptions<T>
 ) {
+  const initialValueRef = useRef(initialValue);
   const isEqualRef = useRef(options?.isEqual ?? defaultIsEqual);
   const typeguardRef = useRef(options?.typeguard ?? defaultTypeguard);
   ...
-  const value = useSyncExternalStore(
-    memoizedSubscriber,
-    getSnapshot(
+  const memoizedGetSnapshot = useMemo(() => {
+    return getSnapshot(
       key,
       initialValueRef.current,
       isEqualRef.current,
       typeguardRef.current
-    )
-  );
-
+    );
+  }, [key]);
+  ...
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key !== key || !event.newValue) return;
@@ -844,7 +855,7 @@ function useSyncLocalStorage<T>(
 }
 ```
 
-옵션을 묶어 세 번째 파라미터로 전달 받도록 하고, 각 옵션을 `useRef`를 통해 참조하도록 했다. 이렇게 하면 밖에서 memoization되지 않은 함수를 전달해도, 처음 전달된 함수를 호출할 수 있게 된다.
+옵션을 묶어 세 번째 파라미터로 전달 받도록 하고, 각 옵션을 `useRef`를 통해 참조하도록 했다. 이전에도 말했듯, 이렇게 하면 밖에서 memoization되지 않은 함수를 전달해도, 처음 전달된 함수를 호출할 수 있게 된다.
 
 그리고 `getSnapshot` 함수에 `typeguard`를 추가로 전달하도록 하고, `storage`이벤트 핸들러에서도 `typeguard`를 사용하여, 이벤트를 통해 전달받은 값이 올바른 타입인지 검증하도록 했다.
 
@@ -1000,14 +1011,13 @@ function useSyncLocalStorage<T>(
   const serializerRef = useRef(options?.serializer ?? defaultSerializer);
   const deserializerRef = useRef(options?.deserializer ?? defaultDeserializer);
   ...
-  const value = useSyncExternalStore(
-    memoizedSubscriber,
-    getSnapshot(
+  const memoizedGetSnapshot = useMemo(() => {
+    return getSnapshot(
       ...
       deserializerRef.current
-    )
-  );
-
+    );
+  }, [key]);
+  ...
   const setter = useCallback(
     (next: T | ((value: T) => T)) => {
       const newValue = next instanceof Function ? next(value) : next;
@@ -1223,6 +1233,7 @@ function useSyncLocalStorage<T>(
   initialValue: T,
   options?: useSyncLocalStorageOptions<T>
 ) {
+  const initialValueRef = useRef(initialValue);
   const isEqualRef = useRef(options?.isEqual ?? defaultIsEqual);
   const typeguardRef = useRef(options?.typeguard ?? defaultTypeguard);
   const serializerRef = useRef(options?.serializer ?? defaultSerializer);
@@ -1233,16 +1244,17 @@ function useSyncLocalStorage<T>(
     [key]
   );
 
-  const value = useSyncExternalStore(
-    memoizedSubscriber,
-    getSnapshot(
+  const memoizedGetSnapshot = useMemo(() => {
+    return getSnapshot(
       key,
-      initialValue,
+      initialValueRef.current,
       isEqualRef.current,
       typeguardRef.current,
       deserializerRef.current
-    )
-  );
+    );
+  }, [key]);
+
+  const value = useSyncExternalStore(memoizedSubscriber, memoizedGetSnapshot);
 
   const setter = useCallback(
     (next: T | ((value: T) => T)) => {
