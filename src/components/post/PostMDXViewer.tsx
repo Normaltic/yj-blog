@@ -1,25 +1,50 @@
-"use client";
-import {
-  MDXRemote,
-  MDXRemoteProps,
-  MDXRemoteSerializeResult
-} from "next-mdx-remote";
+import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
+import { remarkCodeHike, recmaCodeHike } from "codehike/mdx";
+import remarkGfm from "remark-gfm";
 
 import Codeblock from "./Codeblock";
 
 export interface PostMDXViewerProps {
-  mdxSource: MDXRemoteSerializeResult;
+  mdxString: string;
 }
 
 function mergeClassNames(...args: string[]) {
   return args.join(" ");
 }
 
+const OPTIONS: MDXRemoteProps["options"] = {
+  mdxOptions: {
+    remarkPlugins: [
+      [
+        remarkCodeHike,
+        {
+          components: { code: "Codeblock" },
+          syntaxHighlighting: {
+            theme: "github-dark"
+          }
+        }
+      ],
+      [remarkGfm]
+    ],
+    recmaPlugins: [
+      [
+        recmaCodeHike,
+        {
+          components: { code: "Codeblock" },
+          syntaxHighlighting: {
+            theme: "github-dark"
+          }
+        }
+      ]
+    ]
+  }
+};
+
 const COMPONENTS: Exclude<MDXRemoteProps["components"], undefined> = {
   Codeblock
 };
 
-function PostMDXViewer({ mdxSource }: PostMDXViewerProps) {
+function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
   return (
     <div
       className={mergeClassNames(
@@ -35,7 +60,7 @@ function PostMDXViewer({ mdxSource }: PostMDXViewerProps) {
         "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
       )}
     >
-      <MDXRemote {...mdxSource} components={COMPONENTS} />
+      <MDXRemote source={mdxString} options={OPTIONS} components={COMPONENTS} />
     </div>
   );
 }

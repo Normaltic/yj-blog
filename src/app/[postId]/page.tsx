@@ -51,13 +51,16 @@ async function Page({
     return <NotFound />;
   }
 
-  const { title, date } = source.frontmatter;
+  const {
+    content,
+    frontmatter: { title, date }
+  } = source;
 
   return (
     <article>
       <h2 className="text-4xl text-center mt-8 mb-4">{title}</h2>
       <p className="text-center mb-12">{formatDate(new Date(date))}</p>
-      <PostViewer mdxSource={source} />
+      <PostViewer mdxString={content} />
     </article>
   );
 }

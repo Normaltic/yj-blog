@@ -1,8 +1,6 @@
 import fs from "fs";
-import { serialize } from "next-mdx-remote/serialize";
 import path from "path";
-import { remarkCodeHike, recmaCodeHike } from "codehike/mdx";
-import remarkGfm from "remark-gfm";
+import matter from "gray-matter";
 
 interface PostFrontmatter {
   title: string;
@@ -25,14 +23,9 @@ export async function getPosts() {
   const posts = await Promise.all(
     POST_PATHS.map(async (postPath) => {
       const source = fs.readFileSync(path.join(POST_DIRECTORY_PATH, postPath));
-      const md = await serialize<Record<string, unknown>, PostFrontmatter>(
-        source,
-        {
-          parseFrontmatter: true
-        }
-      );
+      const { data: frontmatter } = matter(source);
       return {
-        data: md.frontmatter,
+        data: frontmatter as PostFrontmatter,
         path: postPath.replace(/.mdx?$/, "")
       };
     })
@@ -54,35 +47,7 @@ export async function getPost(title: string) {
   const postFilePath = path.join(POST_DIRECTORY_PATH, postFileName);
   const source = fs.readFileSync(postFilePath);
 
-  const md = await serialize<Record<string, unknown>, PostFrontmatter>(source, {
-    mdxOptions: {
-      format: "mdx",
-      remarkPlugins: [
-        [
-          remarkCodeHike,
-          {
-            components: { code: "Codeblock" },
-            syntaxHighlighting: {
-              theme: "github-dark"
-            }
-          }
-        ],
-        [remarkGfm]
-      ],
-      recmaPlugins: [
-        [
-          recmaCodeHike,
-          {
-            components: { code: "Codeblock" },
-            syntaxHighlighting: {
-              theme: "github-dark"
-            }
-          }
-        ]
-      ]
-    },
-    parseFrontmatter: true
-  });
+  const { content, data: frontmatter } = matter(source);
 
-  return md;
+  return { content, frontmatter: frontmatter as PostFrontmatter };
 }
