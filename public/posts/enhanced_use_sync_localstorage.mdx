@@ -57,7 +57,7 @@ useEffect(() => {
 
 필요할 때마다 매번 선언하기에는 번거롭고 중복 코드가 발생하기 때문에, 이를 간편하게 사용하기 위해 커스텀 훅을 만들어 사용하는 경우가 많다.
 
-```tsx useLocalStorage.tsx
+```tsx title="useLocalStorage.tsx"
 import { useState, useEffect } from "react";
 
 function getLocalStorageItem<T>(key: string, initialValue: T): T {
@@ -87,7 +87,7 @@ function useLocalStorage<T>(key: string, initialValue: T) {
 
 예를 들어, 하나의 컴포넌트에서 `localStorage`의 특정 키 값을 업데이트해도 React는 이 변화를 감지하지 못한다. 그래서 다른 컴포넌트에서는 여전히 이전 값을 참조하게 된다.
 
-```tsx Counter.tsx
+```tsx title="Counter.tsx"
 function Counter() {
   const [count, setCount] = useLocalStorage("counter", 0);
 
@@ -106,7 +106,7 @@ function Counter() {
 
 해당 컴포넌트를 여러 개 렌더링하고, 한 컴포넌트를 조작한다고 해보자.
 
-```tsx CounterViewer.tsx
+```tsx title="CounterViewer.tsx"
 function CounterViewer() {
   return (
     <div style={{ display: "flex", gap: "1rem" }}>
@@ -165,7 +165,7 @@ class LocalStorageEvent<T> extends CustomEvent<LocalStorageEventDetail<T>> {
 
 이제 `useLocalStorageWithEvent` Hook을 수정하여, `localStorage`의 값을 업데이트할 때마다 이 이벤트를 발생시키도록 해보자.
 
-```tsx useLocalStorageWithEvent.tsx
+```tsx title="useLocalStorageWithEvent.tsx"
 function useLocalStorageWithEvent<T>(key: string, initialValue: T) {
   const eventKey: LocalStorageEventType = `localStorageChanged:${key}`;
 
@@ -338,7 +338,7 @@ function setSnapshot<T>(key: string, value: T) {
 
 이제 `useSyncExternalStore`를 사용하여 `localStorage`의 값을 구독하는 훅을 구현할 수 있다.
 
-```tsx useLocalStorageWithExternalStore.tsx
+```tsx title="useLocalStorageWithExternalStore.tsx"
 function useLocalStorageWithExternalStore<T>(key: string, initialValue: T) {
   const memoizedSubscriber = useCallback(
     (cb: () => void) => subscribe(key, cb),
@@ -373,7 +373,7 @@ function useLocalStorageWithExternalStore<T>(key: string, initialValue: T) {
 
 그렇다면 객체를 저장하면 어떻게 될까? 배열을 변경하고 출력하는 컴포넌트를 만들어보자.
 
-```tsx ArrayController.tsx
+```tsx title="ArrayController.tsx"
 let number = 0;
 
 function ArrayController() {
@@ -429,7 +429,7 @@ function getSnapshot<T>(
 
 이제 `useLocalStorageWithExternalStore` Hook을 수정하고, `ArrayController` 컴포넌트에서 `isEqual` 함수를 전달하도록 하자.
 
-```tsx useLocalStorageWithExternalStore.tsx
+```tsx title="useLocalStorageWithExternalStore.tsx"
 function useLocalStorageWithExternalStore<T>(
   key: string,
   initialValue: T,
@@ -451,7 +451,7 @@ function useLocalStorageWithExternalStore<T>(
 
 `initialValue`와 `isEqual`을 `useRef`를 통해 참조하도록 했다. 이렇게 하면 밖에서 memoization 하지 않고 전달하더라도, 처음 전달되는 값을 참조할 수 있게 되어 매번 새로운 참조값이 되는 것을 방지할 수 있다.
 
-```tsx ArrayController.tsx
+```tsx title="ArrayController.tsx"
 function isArrayEqual<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((item, index) => item === b[index]);
@@ -519,8 +519,7 @@ useEffect(() => {
 
 <summary>`useLocalStorageWithListener.tsx` 전체 코드</summary>
 
-```tsx useLocalStorageWithListener.tsx
-// !line-numbers
+```tsx title="useLocalStorageWithListener.tsx" showLineNumbers
 import { useCallback, useEffect, useState } from "react";
 
 function getLocalStorageItem<T>(key: string, initialValue: T): T {
@@ -598,8 +597,7 @@ export default useLocalStorageWithListener;
 <details>
 <summary>`useSyncLocalStorage.tsx` 코드</summary>
 
-```tsx useSyncLocalStorage.tsx
-// !line-numbers
+```tsx title="useSyncLocalStorage.tsx" showLineNumbers
 import { useRef, useCallback, useSyncExternalStore } from "react";
 
 function getLocalStorageItem<T>(key: string, initialValue: T): T {
@@ -689,8 +687,7 @@ export default useSyncLocalStorage;
 
 다음, 탭 간의 동기화는 `storage` 이벤트를 통해 수행 가능하다고 했다. 앞에서 구현했던 `useLocalStorageWithExternalStore`를 이전 섹션을 참고해서, `storage` 이벤트를 리스닝하여 다른 탭에서의 변경도 감지하도록 코드를 추가하자.
 
-```tsx
-// !line-numbers 75
+```tsx showLineNumbers{75}
  ...
   useEffect(() => {
     const handleStorageChange = (event: StorageEvent) => {
@@ -861,7 +858,7 @@ function useSyncLocalStorage<T>(
 
 이제 `localStorage` 읽거나 이벤트를 통해 받은 값에 대해서, 전달받은 `typeguard` 함수를 통해 타입 검증을 수행한다.
 
-```tsx ArrayController.tsx
+```tsx title="ArrayController.tsx"
 function isArrayEqual<T>(a: T[], b: T[]): boolean {
   if (a.length !== b.length) return false;
   return a.every((item, index) => item === b[index]);
@@ -993,7 +990,6 @@ function getSnapshot<T>(
 `getSnapshot` 함수는 직접 호출하지는 않기 때문에, `deserializer`만 추가로 전달하도록 수정했다.
 
 ```ts
-
 function defaultSerializer<T>(value: T): string {
   return JSON.stringify(value);
 }
@@ -1119,8 +1115,7 @@ function MapController() {
 
 `useSyncLocalStorage` 전체 코드는 이렇게 구성되었다.
 
-```tsx useSyncLocalStorage.tsx
-// !line-numbers
+```tsx title="useSyncLocalStorage.tsx" showLineNumbers
 import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 
 export type IsEqual<T> = (a: T, b: T) => boolean;

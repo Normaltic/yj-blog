@@ -1,8 +1,8 @@
 import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
-import { remarkCodeHike, recmaCodeHike } from "codehike/mdx";
+import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 
-import Codeblock from "./Codeblock";
+import "./postMDXViewer.css";
 
 export interface PostMDXViewerProps {
   mdxString: string;
@@ -14,34 +14,17 @@ function mergeClassNames(...args: string[]) {
 
 const OPTIONS: MDXRemoteProps["options"] = {
   mdxOptions: {
-    remarkPlugins: [
+    remarkPlugins: [[remarkGfm]],
+    rehypePlugins: [
       [
-        remarkCodeHike,
+        rehypePrettyCode,
         {
-          components: { code: "Codeblock" },
-          syntaxHighlighting: {
-            theme: "github-dark"
-          }
-        }
-      ],
-      [remarkGfm]
-    ],
-    recmaPlugins: [
-      [
-        recmaCodeHike,
-        {
-          components: { code: "Codeblock" },
-          syntaxHighlighting: {
-            theme: "github-dark"
-          }
+          theme: "dark-plus",
+          keepBackground: false
         }
       ]
     ]
   }
-};
-
-const COMPONENTS: Exclude<MDXRemoteProps["components"], undefined> = {
-  Codeblock
 };
 
 function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
@@ -60,7 +43,7 @@ function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
         "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
       )}
     >
-      <MDXRemote source={mdxString} options={OPTIONS} components={COMPONENTS} />
+      <MDXRemote source={mdxString} options={OPTIONS} />
     </div>
   );
 }

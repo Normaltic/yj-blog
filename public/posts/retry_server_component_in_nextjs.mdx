@@ -16,7 +16,7 @@ Next.js의 App Router에서는 서버에서 실행되는 컴포넌트, 즉 서�
 
 다음과 같은 컴포넌트가 있다. `RandomNumber`는 숫자를 랜덤으로 받아와 `Number` 컴포넌트를 출력하는 서버 컴포넌트이다. `Number` 컴포넌트는 그냥 숫자를 받아 출력하는 단순한 컴포넌트다.
 
-```tsx RandomNuber.tsx
+```tsx title="RandomNuber.tsx"
 import { getRandomNumber } from "@/utils/getRandomNumber";
 import Number from "./Number";
 
@@ -33,7 +33,7 @@ export default async function RandomNumber({ className }: RandomNumberProps) {
 
 데이터 요청은 외부 요청 대신, 1.5초 뒤에 랜덤 숫자를 뽑아 반환하도록 하여 임시로 구현했다.
 
-```tsx getRandomNumber.ts
+```tsx title="getRandomNumber.ts"
 async function getRandomNumber() {
   await new Promise<void>((res) => {
     setTimeout(() => res(), 1500);
@@ -46,7 +46,7 @@ async function getRandomNumber() {
 
 레이아웃을 다음과 같이 구성했다. 초록색 화면은 정적인 컨텐츠이고, 오른쪽 아래 테두리 영역은 데이터를 받아와 보여주는 영역이다.
 
-```tsx page.tsx
+```tsx title="page.tsx"
 export default async function Home() {
   return (
     <div>
@@ -66,7 +66,7 @@ export default async function Home() {
 
 그리고 데이터 요청 실패를 구현하기 위해, 5 이상일 때에는 통과, 5 미만일 때에는 에러를 던져 실패로 처리하는 로직을 적용했다.
 
-```ts getRandomNumber.ts
+```ts title="getRandomNumber.ts"
 export async function getRandomNumber() {
   ...
   const rand = Math.floor(Math.random() * 10);
@@ -81,7 +81,7 @@ export async function getRandomNumber() {
 
 이 때, 컴포넌트 내부에서 `try/catch`구문을 사용하는 등으로 에러를 잡으면 좋겠지만, 예외 처리를 못한 경우가 있을 수 있다. 이 경우에는 `error.tsx`를 작성하여, 해당 페이지에서 에러가 발생했을 때 보여줄 화면을 정의할 수 있다([공식 문서 - Error handling](https://nextjs.org/docs/app/building-your-application/routing/error-handling#using-error-boundaries)).
 
-```tsx error.tsx
+```tsx title="error.tsx"
 "use client";
 
 export default function Error({
@@ -106,7 +106,7 @@ export default function Error({
 
 `error.tsx`는 페이지 단위로 에러 메세지를 출력한다. 그런데 페이지가 아니라, 에러가 발생한 영역이나 컴포넌트 단위로 핸들링하고 싶을수도 있다. 이 때에는, 클래스 컴포넌트의 `getDerivedStateFromError`와 `componentDidCatch` 메서드를 사용하면, 특정 범위의 에러 처리를 수행할 수 있다.
 
-```tsx ErrorBoundary.tsx
+```tsx title="ErrorBoundary.tsx"
 "use client";
 
 import { Component, ErrorInfo } from "react";
@@ -178,7 +178,7 @@ export default class ErrorBoundary extends Component<
 
 요청에 실패했을 때 에러를 처리하고 다시 요청하는 방법으로 생각나는 가장 쉬운 것은, 요청을 클라이언트 컴포넌트로 변경해서 처리하는 방법이다.
 
-```tsx ClientRandomNumber.tsx
+```tsx title="ClientRandomNumber.tsx"
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -244,7 +244,7 @@ export default function ClientRandomNumber({
 
 동일한 요청을 하고 같은 결과물을 보여주는 컴포넌트를 서버 컴포넌트와 클라이언트 컴포넌트로 각각 작성해서, 서버 컴포넌트에서 먼저 데이터를 요청하고, 실패할 경우 클라이언트 컴포넌트를 렌더링 하는 방식이다.
 
-```tsx ServerRandomNumber.tsx
+```tsx title="ServerRandomNumber.tsx" {17}
 import { getRandomNumber } from "@/utils/getRandomNumber";
 import ClientRandomNumber from "./ClientRandomNumber";
 import Number from "./Number";
@@ -261,7 +261,6 @@ export default async function ServerRandomNumber({
   try {
     number = await getRandomNumber();
   } catch {
-    // !mark (1:1)
     return <ClientRandomNumber className={className} />;
   }
 
@@ -287,7 +286,7 @@ export default async function ServerRandomNumber({
 
 그래서 컴포넌트를 직접 전달하는것 보다, 데이터를 파라미터로 전달하는 `renderProps` 패턴을 사용해 보기로 했다.
 
-```tsx ClientRender.tsx
+```tsx title="ClientRender.tsx"
 "use client";
 
 import { useCallback, useState } from "react";
@@ -342,7 +341,7 @@ export default function ClientRender<T>({
 
 서버 컴포넌트 역시 동일한 방식으로 추상화했다.
 
-```tsx ServerRender.tsx
+```tsx title="ServerRender.tsx"
 import ClientRender from "./ClientRender";
 
 export default async function ServerRender<T>({
@@ -368,7 +367,7 @@ export default async function ServerRender<T>({
 
 마지막으로, 원하는 곳에 `ServerRender` 컴포넌트를 위치시키고, 데이터 요청 함수와 렌더 함수를 전달했다.
 
-```tsx page.tsx
+```tsx title="page.tsx"
 import ServerRender from "@/components/ServerRender";
 import Number from "@/components/Number";
 import { getRandomNumber } from "@/utils/getRandomNumber";
@@ -452,8 +451,7 @@ function useApi<T>(fetcher: () => Promise<T>) {
 
 먼저 기존 `ErrorBoundary` 컴포넌트를 수정했다. `fallback`으로 `React.ReactNode` 대신 컴포넌트를 직접 받게 하여, 발생한 에러와 상태를 리셋하는 메서드를 전달하도록 했다(다시 말하지만, `renderProps`는 불가능하다).
 
-```tsx ErrorBoundary.tsx
-// !mark(7:7)
+```tsx title="ErrorBoundary.tsx" {7}
 "use client";
 
 import { Component, ErrorInfo } from "react";

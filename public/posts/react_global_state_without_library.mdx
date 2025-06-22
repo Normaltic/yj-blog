@@ -35,7 +35,7 @@ setValue((prev) => {
 
 예를 들어, 아래 컴포넌트는 버튼을 눌러 숫자를 증감시키는 컴포넌트로, `useState`를 사용하여 `count` 라는 상태를 선언해 사용하고 있다. 그리고 버튼을 누를 때 마다 `setCount` 함수를 통해 1씩 더하거나 빼 상태를 업데이트 한다.
 
-```tsx Counter.tsx
+```tsx title="Counter.tsx"
 function Counter() {
   const [count, setCount] = useState(0);
 
@@ -86,7 +86,7 @@ function CounterController() {
 
 이 경우, 같은 부모로 해당 상태의 위치를 끌어올리고 `props`를 전달하는 방식으로 해결할 수 있다.
 
-```tsx Counter.tsx
+```tsx title="Counter.tsx"
 function Counter() {
   const [count, setCount] = useState(0);
 
@@ -126,7 +126,7 @@ Context API를 간단히 알아보기 위해, 이전 `Counter` 컴포넌트의 `
 
 우선, Context는 `createContext` 함수를 호출해 정의한다.
 
-```tsx CounterProvider.tsx
+```tsx title="CounterProvider.tsx"
 interface CounterContextType {
   count: number;
   setCount: React.Dispatch<React.SetStateAction<number>>;
@@ -147,7 +147,7 @@ Context에는 `Provider`와 `Consumer` 라는 개념이 존재한다. `Provider`
 
 사용할 데이터를 선언하고, `Provider`에 전달하는 `CounterProvider`를 작성한다.
 
-```tsx CounterProvider.tsx
+```tsx title="CounterProvider.tsx"
 ...
 function CounterProvider({ children }: { children: React.ReactNode }) {
   const [count, setCount] = useState(0);
@@ -165,7 +165,7 @@ export { CounterProvider };
 
 그리고 `Counter` 컴포넌트에서 상태를 제거하고, 데이터를 제공할 컴포넌트들을 작성한 `Provider`로 감싼다.
 
-```tsx Counter.tsx
+```tsx title="Counter.tsx"
 import { CounterProvider } from "CounterContext";
 
 function Counter() {
@@ -182,7 +182,7 @@ function Counter() {
 
 Context의 데이터를 참조하는 방법은 두 가지가 있는데, 하나는 `Consumer`를 사용하는 방법이다. `CounterViewer` 컴포넌트를 `Consumer`를 사용해 Context를 참조하도록 변경해 보았다.
 
-```tsx CounterViewer.tsx
+```tsx title="CounterViewer.tsx"
 import CounterContext from "CounterContext";
 
 function CounterViewer() {
@@ -205,7 +205,7 @@ function CounterViewer() {
 
 또 다른 방법으로는 `useContext`를 사용하는 방법이다. 이번엔 `CounterController` 컴포넌트가 `useContext`를 사용하도록 변경해보자.
 
-```tsx CounterController.tsx
+```tsx title="CounterController.tsx"
 import { useContext } from "react";
 import CounterContext from "CounterContext";
 
@@ -305,7 +305,7 @@ const LangContext = createContext<"en" | "ko" | undefined>(undefined);
 
 그런데 Context는 `Provider`의 자식 트리에 데이터를 제공하므로, 여러 Context를 사용할 경우 이를 중첩해서 감싸주어야 한다. 그래서 Context의 가짓수가 많아지면 조금은 보기 불편해질 수 있다.
 
-```tsx App.tsx
+```tsx title="App.tsx"
 function App() {
   return (
     <ThemeContextProvider>
@@ -349,7 +349,7 @@ const snapshot = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot?
 
 이 Hook을 사용한다면, 외부 상태를 직접 구독하는 기능을 구현할 수 있다. 간단하게, 앞서 Context로 다루었던 카운터를 해당 Hook을 통해 구현해보자.
 
-```ts counterStore.ts
+```ts title="counterStore.ts"
 // 상태 정의
 let count = 0;
 // callback 목록을 관리할 set 선언
@@ -379,7 +379,7 @@ export function subscribe(listener: () => void) {
 
 해당 상태를 구독하도록 `CounterViewer`와 `CounterController`를 리팩토링 해보자.
 
-```tsx CounterViewer.tsx
+```tsx title="CounterViewer.tsx"
 import { useSyncExternalStore } from "react";
 import { getSnapshot, subscribe } from "counterStore";
 
@@ -389,7 +389,7 @@ function CounterViewer() {
 }
 ```
 
-```tsx CounterController.tsx
+```tsx title="CounterController.tsx"
 import { useSyncExternalStore } from "react";
 import { getSnapshot, subscribe, setSnapshot } from "counterStore";
 
@@ -411,7 +411,7 @@ function CounterController() {
 
 리팩토링을 하고 보니, 두 컴포넌트에서 `useSyncExternalStore`를 사용해 동일한 방식으로 상태를 구독하여 코드 중복이 생긴다. 이를 Custom Hook으로 추상화하면 더 익숙한 형태로 작성하고 재사용할 수 있다.
 
-```tsx useCounterStore.tsx
+```tsx title="useCounterStore.tsx"
 import { useSyncExternalStore } from "react";
 import { getSnapshot, setSnapshot, subscribe } from "@/store/counterStore";
 
@@ -430,7 +430,7 @@ function useCounterStore() {
 
 예를 들어, 현재 네트워크에 연결된 상태인지 여부를 판단하고 싶다고 하자. 이는 브라우저의 `navigator.onLine` 속성을 통해 네트워크 상태를 판단할 수 있다. 해당 값을 `useEffect`로 구현하면 다음과 같을 것이다.
 
-```tsx useIsOnline.tsx
+```tsx title="useIsOnline.tsx"
 function useIsOnline() {
   const [isOnline, setOnline] = useState(navigator.onLine);
 
@@ -453,7 +453,7 @@ function useIsOnline() {
 
 이는 역시 `useSyncExternalStore`로 구현할 수 있다.
 
-```tsx useIsOnline.tsx
+```tsx title="useIsOnline.tsx"
 function getSnapshot() {
   return navigator.onLine;
 }
@@ -499,7 +499,7 @@ function useIsOnline() {
 
 우선, 앞서 `counter`를 선언했던 방식으로 구현해보자. 관리할 상태의 구조를 먼저 정의한다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 export interface EnvStore {
   version: number;
   type: "alpha" | "beta";
@@ -508,7 +508,7 @@ export interface EnvStore {
 
 그리고 기본 상태와 필요한 함수들을 선언한다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 let envStore: EnvStore = {
   version: 0,
   type: "alpha"
@@ -535,7 +535,7 @@ export function subscribe(listener: () => void) {
 
 정상 작동하는지 확인하기 위해, `useEnvStore` Hook과 `EnvController`, `EnvViewer` 컴포넌트를 작성한다.
 
-```tsx useEnvStore.tsx
+```tsx title="useEnvStore.tsx"
 import { subscribe, getSnapshot } from "@/store/envStore";
 
 function useEnvStore() {
@@ -548,7 +548,7 @@ function useEnvStore() {
 
 <summary>`EnvController.tsx`, `EnvViewer.tsx`</summary>
 
-```tsx EnvController.tsx
+```tsx title="EnvController.tsx"
 "use client";
 import useEnvStore from "@/hooks/useEnvStore";
 import { setSnapshot } from "@/store/envStore";
@@ -597,7 +597,7 @@ function EnvController() {
 }
 ```
 
-```tsx EnvViewer.tsx
+```tsx title="EnvViewer.tsx"
 "use client";
 import useEnvStore from "@/hooks/useEnvStore";
 
@@ -632,7 +632,7 @@ export default function Home() {
 
 추가적으로, `setSnapshot`을 호출하는 것은 가독성이 떨어질 수 있다. 그래서 특정 동작을 별도로 함수로 정의해 두는 방법도 있다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 ...
 export function increaseVersion() {
   const { version } = getSnapshot();
@@ -642,7 +642,7 @@ export function increaseVersion() {
 }
 ```
 
-```tsx EnvController.tsx
+```tsx title="EnvController.tsx"
 function EnvController() {
   return (
     ...
@@ -666,7 +666,7 @@ function EnvController() {
 
 전역 상태를 생성해주는 Factory 함수 `createStore`를 작성해, 전역 상태를 쉽게 추가할 수 있도록 해보자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 function createStore<T>(initialStore: T) {
   let store: T = initialStore;
   const listeners = new Set<() => void>();
@@ -689,7 +689,7 @@ function createStore<T>(initialStore: T) {
 
 생성할 전역 상태의 초기값을 할당하면, 필요한 함수를 반환하는 Factory 함수이다. `envStore`에 적용하면 다음과 같다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 ...
 export const { subscribe, getSnapshot, setSnapshot } = createStore(envStore);
 ```
@@ -702,7 +702,7 @@ Factory 함수를 통해 쉽게 전역 상태를 선언할 수 있게 되었지�
 
 Factory 함수에서 Hook 도 반환해주면 더 편해지지 않을까? 내부에서 선언된 각 함수들을 전달 받은 `useSyncExternalStore`를 감싸는 Hook 을 선언해 반환하도록 하자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 import { useSyncExternalStore } from "react";
 ...
 function createStore<T>(initialStore: T) {
@@ -719,7 +719,7 @@ function createStore<T>(initialStore: T) {
 }
 ```
 
-```ts envStore.ts
+```ts title="envStore.ts"
 export const {
   useStore: useEnvStore,
   ...
@@ -728,10 +728,10 @@ export const {
 
 그리고, `EnvViewer`에서 Custome Hook을 사용하는 대신, `envStore`에서 내보낸 Hook을 사용하도록 변경한다.
 
-```tsx EnvViewer.tsx
+```tsx title="EnvViewer.tsx"
 "use client";
 // import useEnvStore from "@/hooks/useEnvStore";
-import useEnvStore from "@/store/envStore";
+import { useEnvStore } from "@/store/envStore";
 
 function EnvViewer() {
   const env = useEnvStore();
@@ -756,7 +756,7 @@ subscribe(() => {
 
 `subscribe`의 현재 명세상 `getSnapshot`을 호출해 상태를 받아와야 하고, 변경되기 이전 상태를 확인할 수는 없는 구조다. 이를 수정하여, `subscribe`에서 이전 값과 현재 값을 확인할 수 있도록 확장해보자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 type Listener<T> = (prev: T, next: T) => unknown;
 
 function createStore<T>(initialStore: T) {
@@ -803,7 +803,7 @@ export interface EnvStore {
 
 `EnvViewer` 컴포넌트에서는 여전히 `version`, `type` 만 출력해야 해서, `EnvViewer`를 아래와 같이 수정했다.
 
-```tsx EnvViewer.tsx
+```tsx title="EnvViewer.tsx"
 function EnvViewer() {
   const env = useEnvStore();
   const value = { version: env.release.version, type: env.type };
@@ -818,7 +818,7 @@ function EnvViewer() {
 
 `createStore`의 `useStore`의 명세를 변경해보자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 function createStore<T>(initialStore: T) {
   ...
   function useStore<U = T>(
@@ -838,7 +838,7 @@ function createStore<T>(initialStore: T) {
 
 그리고 `EnvViewer`에서 셀렉터를 작성해보았다.
 
-```tsx EnvViewer.tsx
+```tsx title="EnvViewer.tsx"
 function EnvViewer() {
   const env = useEnvStore(
     (store) => {
@@ -883,7 +883,7 @@ yarn add --dev @types/use-sync-external-store
 
 `useSyncExternalStoreWithSelector` 의 명세는 `useSyncExternalStore`와 거의 동일한데, 추가로 두 개를 더 받는다. 해당 Hook의 타입 정의는 다음과 같다.
 
-```ts @types/use-sync-external-store/with-selector.d.ts
+```ts title="@types/use-sync-external-store/with-selector.d.ts"
 export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
   subscribe: (onStoreChange: () => void) => () => void,
   getSnapshot: () => Snapshot,
@@ -897,7 +897,7 @@ export function useSyncExternalStoreWithSelector<Snapshot, Selection>(
 
 Hook의 타입을 참고해서, `createStore`에 `selector`가 적용된 새 Hook을 추가해주도록 하자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
 ...
 type Selector<T, U> = (store:T) => U;
@@ -930,14 +930,14 @@ function createStore<T> {
 
 그리고 `envStore`에서 `useStoreWithSelector`도 내보내도록 추가하고, `EnvViewer`에서 이를 사용하도록 수정했다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 export const {
   useStoreWithSelector: useEnvStoreWithSelector,
   ...
 } = createStore(envStore);
 ```
 
-```tsx EnvViewer.tsx
+```tsx title="EnvViewer.tsx"
 import { useEnvStoreWithSelector } from "@/store/envStore";
 
 function EnvViewer() {
@@ -982,7 +982,7 @@ setTimeout(() => {
 
 `release` 속성을 참조하는 컴포넌트가 있다고 하자.
 
-```tsx ReleaseInfo.tsx
+```tsx title="ReleaseInfo.tsx"
 function ReleaseInfo() {
   const release = useEnvStoreWithSelector((store) => store.release);
   ...
@@ -1034,7 +1034,7 @@ console.log(obj1.name); // "obj1"
 
 해당 라이브러리를 적용해보자.
 
-```tsx createStore.ts
+```tsx title="createStore.ts"
 import { Draft, produce } from "immer";
 
 function createStore<T>(initialStore: T) {
@@ -1052,7 +1052,7 @@ function createStore<T>(initialStore: T) {
 
 변경된 `setSnapshot`의 명세는 다음과 같이 사용할 수 있다. 변경된 명세를 바탕으로 `version` 속성을 1씩 증가시키는 `increaseVersion` 함수를 재작성해보자.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 export function increaseVersion() {
   setSnapshot((draft) => {
     draft.release.version += 1;
@@ -1076,7 +1076,7 @@ const { ... } = createStore(envStore, {
 
 그래서 Zustand와 비슷하면서도, 상태와 행위는 구분하여 선언할 수 있도록 구현해보았다. `createStore`의 첫 번째 파라미터로 초기 상태를, 두 번째 파라미터로 함수들을 정의해 받을 수 있도록 해보자.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 // setSnapshot 타입 정의
 type SetSnapshot<T> = (setter: (draft: Draft<T>) => void) => void;
 
@@ -1122,7 +1122,7 @@ function createStore<T, U extends FunctionMap>(
 
 코드만 보아서는 어떻게 작동하는지 잘 안보일 수 있다. 변경된 `createStore`의 명세를 사용해 `envStore`를 재정의해보자. `version`을 증감시키는 함수와, `type`을 설정하는 `changer` 함수를 선언했다.
 
-```ts envStore.ts
+```ts title="envStore.ts"
 export const {
   ...,
   increaseVersion,
@@ -1155,7 +1155,7 @@ export const {
 
 이제 `EnvController`에서 `setSnapshot`을 직접 호출하는 대신, `changer`를 호출하여 상태를 변경할 수 있다.
 
-```tsx EnvController.tsx
+```tsx title="EnvController.tsx"
 function EnvController() {
   return (
     <div>
@@ -1206,7 +1206,7 @@ function EnvController() {
 
 구현된 `createStore`의 전체 코드는 다음과 같다.
 
-```ts createStore.ts
+```ts title="createStore.ts"
 import { Draft, produce } from "immer";
 import { useSyncExternalStore } from "react";
 import { useSyncExternalStoreWithSelector } from "use-sync-external-store/with-selector";
@@ -1283,7 +1283,7 @@ export default createStore;
 
 전역 상태를 선언할 때에는 아래처럼 생성할 수 있다.
 
-```ts someStore.ts
+```ts title="someStore.ts"
 import createStore from "@/store/createStore";
 
 interface SomeStore {
@@ -1296,7 +1296,7 @@ const initialStore: SomeStore = {
   type: "alpha"
 };
 
-export const { ... } = createStore<SomeStore, SomeStore>(
+export const { ... } = createStore(
   initialStore,
   (setSnapshot) => ({
     someChangeAction: () => {

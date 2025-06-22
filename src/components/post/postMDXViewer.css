@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+figure > figcaption {
+  font-size: 0.875rem;
+  background-color: var(--tw-prose-pre-bg);
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid;
+  @apply border-gray-600;
+  border-top-left-radius: 0.375rem;
+  border-top-right-radius: 0.375rem;
+  color: var(--tw-prose-pre-code);
+}
+
+figure > figcaption + pre {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+figure > pre > code[data-line-numbers] {
+  counter-reset: line;
+}
+
+figure > pre > code[data-line-numbers] > span[data-line]::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 1rem;
+  margin-right: 1rem;
+  text-align: right;
+  @apply text-gray-400;
+}
+
+figure
+  > pre
+  > code[data-line-numbers-max-digits="2"]
+  > span[data-line]::before {
+  width: 1.25rem;
+}
+
+figure
+  > pre
+  > code[data-line-numbers-max-digits="3"]
+  > span[data-line]::before {
+  width: 1.5rem;
+}
+
+figure > pre > code > span[data-highlighted-line] {
+  box-shadow: -2px 0 0 0 var(--color-primary);
+  background-color: color-mix(in oklab, var(--color-primary) 20%, transparent);
+}
