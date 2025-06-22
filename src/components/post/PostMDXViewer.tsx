@@ -33,6 +33,7 @@ function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
       className={mergeClassNames(
         "prose dark:prose-invert",
         "max-w-full",
+        "prose-figcaption:linear-transition-colors",
         "prose-pre:linear-transition-colors",
         "prose-h3:text-3xl prose-h3:border-b-1 prose-h3:pb-2 prose-h3:mt-16",
         "prose-h4:text-2xl prose-h4:mt-14",
