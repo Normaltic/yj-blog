@@ -1,4 +1,4 @@
-import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
+import { MarkdownAsync, Options } from "react-markdown";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 
@@ -12,19 +12,17 @@ function mergeClassNames(...args: string[]) {
   return args.join(" ");
 }
 
-const OPTIONS: MDXRemoteProps["options"] = {
-  mdxOptions: {
-    remarkPlugins: [[remarkGfm]],
-    rehypePlugins: [
-      [
-        rehypePrettyCode,
-        {
-          theme: "dark-plus",
-          keepBackground: false
-        }
-      ]
+const OPTIONS: Options = {
+  remarkPlugins: [[remarkGfm]],
+  rehypePlugins: [
+    [
+      rehypePrettyCode,
+      {
+        theme: "dark-plus",
+        keepBackground: false
+      }
     ]
-  }
+  ]
 };
 
 function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
@@ -44,7 +42,7 @@ function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
         "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
       )}
     >
-      <MDXRemote source={mdxString} options={OPTIONS} />
+      <MarkdownAsync {...OPTIONS}>{mdxString}</MarkdownAsync>
     </div>
   );
 }
