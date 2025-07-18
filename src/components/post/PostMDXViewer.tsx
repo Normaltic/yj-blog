@@ -1,4 +1,5 @@
 import path from "path";
+import Image from "next/image";
 import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
@@ -33,6 +34,16 @@ const OPTIONS: MDXRemoteProps["options"] = {
   }
 };
 
+const COMPONENTS: MDXRemoteProps["components"] = {
+  img: (props) => {
+    if (!props.width || !props.height) {
+      // eslint-disable-next-line @next/next/no-img-element
+      return <img {...props} alt={props.alt || "Image"} loading="lazy" />;
+    }
+    return <Image {...props} alt={props.alt || "Image"} />;
+  }
+};
+
 function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
   return (
     <div
@@ -50,7 +61,7 @@ function PostMDXViewer({ mdxString }: PostMDXViewerProps) {
         "[&_details]:my-10 [&_details]:px-4 [&_details]:py-2 [&_details]:border-l-4 [&_details]:border-primary [&_details_summary]:text-xl [&_details>*:last-child]:mb-0"
       )}
     >
-      <MDXRemote source={mdxString} options={OPTIONS} />
+      <MDXRemote source={mdxString} options={OPTIONS} components={COMPONENTS} />
     </div>
   );
 }
