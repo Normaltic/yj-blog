@@ -1,7 +1,9 @@
+import path from "path";
 import { MDXRemote, MDXRemoteProps } from "next-mdx-remote/rsc";
 import rehypePrettyCode from "rehype-pretty-code";
 import remarkGfm from "remark-gfm";
 
+import rehypeImageSize from "@/utils/rehypeImageSize";
 import rehypeImagePath from "@/utils/rehypeImagePath";
 
 import "./postMDXViewer.css";
@@ -19,6 +21,7 @@ const OPTIONS: MDXRemoteProps["options"] = {
     remarkPlugins: [[remarkGfm]],
     rehypePlugins: [
       [rehypeImagePath, { prefix: "/" }],
+      [rehypeImageSize, { root: path.join(process.cwd(), "public") }],
       [
         rehypePrettyCode,
         {
