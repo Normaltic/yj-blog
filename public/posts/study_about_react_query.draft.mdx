@@ -22,7 +22,7 @@ react-query가 등장하게 됨
 
 그리고 도중에 발생하는 에러를 처리하기 위한 상태를 추가하기도 함
 
-(예시 코드)
+(예시 코드 - useQuery를 사용하지 않은 경우)
 
 그렇게 필요한 기능들을 계속 추가하다보면 API 하나 처리하는데 너무 많은 상태를 관리하게 되기 시작하면서 복잡해짐.
 
@@ -34,7 +34,7 @@ react-query가 등장하게 됨
 
 react-query는 API 처리 과정에서 필요할 수 있는 상태부터 캐싱 기능까지 다양한 기능을 제공함.
 
-### react-query
+### react-query 기본 설정
 
 우선 react-query를 사용하기 위해서는 기본 설정을 해줘야 함.
 
@@ -48,7 +48,7 @@ react-query는 동일한 요청을 캐싱하고 재사용한다. 이를 위해 �
 
 QueryClient라는 객체를 생성하고, QueryClientProvider를 통해 이 객체를 제공해야 함.
 
-(예제 코드)
+(예제 코드 - QueryClientProvider 설정)
 
 QueryClient는 react-query의 핵심 객체로 다음과 같은 역할을 담당한다
 
@@ -58,7 +58,7 @@ QueryClient는 react-query의 핵심 객체로 다음과 같은 역할을 담당
 
 예를 들어, 쿼리의 기본 캐시 시간을 설정해 전역적으로 적용할 수 있음.
 
-(예제 코드)
+(예제 코드 - QueryClient 설정)
 
 이렇게 설정하면, 프로젝트의 Provider 하위 컴포넌트에서 react-query의 훅을 사용할 수 있게 됨.
 
@@ -70,7 +70,7 @@ QueryClient는 react-query의 핵심 객체로 다음과 같은 역할을 담당
 
 API 요청을 처리하면서도 로딩, 에러, 데이터 상태를 자동으로 관리해주기 떄문에 `useEffect`와 `useState`를 직접 조합하는 것보다 훨씬 간결함.
 
-(예제 코드)
+(예제 코드 - useQuery 사용 예시)
 
 코드는 훅에 옵션을 전달하고, 반환된 상태를 활용해 로딩, 에러, 데이터를 처리함.
 
@@ -79,6 +79,8 @@ API 요청을 처리하면서도 로딩, 에러, 데이터 상태를 자동으�
 반환값 몇 개 설명(isLoading, isError, data, error, refetch )
 
 isLoading, isFetching 차이
+
+( gif - isLoading과 isFetching의 차이? )
 
 `useQuery`는 다음과 같은 인자를 받음
 
@@ -97,6 +99,12 @@ enabled 설명
 
 placeholderData 설명
 
+( gif - data가 placeholderData로 초기화 되는 것 )
+
+keepPreviousData 언급
+
+( gif - 데이터 로딩 도중 이전 데이터가 유지되는 것 )
+
 initialData 설명
 
 이를 활용한다면, API를 호출해 데이터를 가져오는 작업을 훨씬 깔끔하게 선언할 수 있고, 필요한 상태를 쉽게 활용할 수 있음.
@@ -109,7 +117,7 @@ initialData 설명
 
 또한, 생성, 수정, 삭제의 경우에는 일반적으로 서버의 데이터를 변경하는 작업이므로, 요청에 대한 캐싱은 수행되지 않는다는 특징이 있다.
 
-(예제 코드)
+(예제 코드 - useMutation 사용 예시)
 
 반환값 설명
 
@@ -118,8 +126,8 @@ initialData 설명
 
 `useMutation`은 다음과 같은 인자를 받음
 
-- onSuccess, onError, onSettled
 - variables
+- onSuccess, onError, onSettled
 
 이를 활용해, API를 호출하는 행위를 훨씬 간결하게 선언할 수 있고, 필요한 상태를 쉽게 활용할 수 있음.
 
@@ -177,11 +185,19 @@ invalidateQueries는 특정 쿼리 키에 해당하는 캐시를 무효화시킴
 
 (예제 코드)
 
+DevTool을 확인해보면, 버튼을 누른 시점에 캐시가 stale 상태로 바뀌는 것을 확인할 수 있음.
+
+(gif - 버튼 딸깍 하면 stale 상태로 바뀌는 것)
+
 refetchQueries는 특정 쿼리 키에 해당하는 쿼리를 즉시 다시 호출함
 
 그래서 invalidateQueries와 달리, 즉시 데이터를 갱신하고자 할 때 사용됨.
 
 (예제 코드)
+
+버튼을 누르면 즉시 데이터를 다시 가져오는 것을 확인할 수 있음.
+
+(gif - 버튼 딸깍 하면 네트워크 요청이 다시 발생하는 것)
 
 정리하자면, invalidateQueries는 캐시를 무효화시키고, 다음번에 다시 데이터를 가져오도록 함. refetchQueries는 즉시 데이터를 다시 가져오도록 함.
 
@@ -199,19 +215,19 @@ useQuery를 통해 데이터를 조회하고, useMutation을 통해 데이터를
 
 특정 데이터를 불러오는 쿼리가 있고, 이 데이터를 수정하는 뮤테이션이 있다고 가정해보자.
 
-(예제 코드)
+(예제 코드 - useQuery와 useMutation이 함께 사용되는 예시)
 
 데이터를 수정하는 뮤테이션이 성공적으로 완료되면, 위의 쿼리를 업데이트하여 최신 상태를 반영하고 싶을 수 있음.
 
 이런 경우 갱신 하고 싶은 `useQuery`에서 반환된 `refetch` 함수를 호출해 데이터를 다시 가져오도록 할 수 있음.
 
-(예제 코드)
+(예제 코드 - 뮤테이션 성공 시 refetch 호출)
 
 하지만 `refetch`를 직접 호출할 수 없는 경우, 예를 들어 `useQuery`와 `useMutation`이 서로 다른 컴포넌트에 있을 때는 어떻게 해야 할까? 아니면 여러 개의 쿼리를 한 번에 갱신하고 싶을 때는?
 
 이 때 바로 invalidateQuery와 refetchQueries를 활용할 수 있다.
 
-(예제 코드)
+(예제 코드 - 뮤테이션 성공 시 invalidateQueries 호출)
 
 뮤테이션이 완료됬을 때, queryClient의 invalidateQueries를 호출해 특정 쿼리를 무효화시킨다. 그러면 해당 쿼리의 캐시는 stale 상태가 되고, 특정 시점에 업데이트 되며 최신 데이터를 반영하게 된다. 혹은 refetchQueries를 호출해 즉시 데이터를 다시 가져오도록 할 수도 있다.
 
@@ -221,10 +237,25 @@ useQuery를 통해 데이터를 조회하고, useMutation을 통해 데이터를
 
 실제로 간단한 TODO 리스트를 통해서 실제 흐름을 한 번 확인해보자.
 
-- 핵심 사용 흐름
-  - useQuery로 데이터 호출
-  - useMutation으로 데이터 호출
-  - invalidateQueries로 캐시 무효화
+TODO 리스트를 불러오는 쿼리가 `/`에 있다.
+
+(예제 코드 - TODO 리스트 불러오는 컴포넌트)
+
+TODO 아이템을 추가하는 뮤테이션이 `/add`에 있다. 이 페이지에서 작업을 완료하면 `/`로 돌아가도록 한다.
+
+(예제 코드 - TODO 아이템 추가하는 컴포넌트)
+
+`/add`에서 아이템을 추가하고 나면, `/`로 돌아왔을 때 최신 상태가 반영되어야 한다. 하지만, TODO 목록의 캐시는 여전히 이전 상태일 수 있다.
+
+(gif - TODO 아이템 추가 후 돌아왔을 때, 이전 상태가 보이는 것)
+
+이를 해결하기 위해, `/add`에서 아이템을 추가하는 뮤테이션이 성공적으로 완료되면, queryClient의 invalidateQueries를 호출해 TODO 리스트 쿼리를 무효화시킨다.
+
+(예제 코드 - 뮤테이션 성공 시 invalidateQueries 호출)
+
+이제 아이템을 추가하고 `/`로 돌아오면, TODO 리스트 쿼리가 stale 상태가 되고, 컴포넌트가 마운트되면서 다시 데이터를 가져오게 된다. 그 결과, 최신 상태가 반영된 TODO 리스트를 볼 수 있다.
+
+(gif - TODO 아이템 추가 후 돌아왔을 때, 최신 상태가 반영되는 것)
 
 ### 마무리
 
