@@ -4,65 +4,131 @@ date: 2025-09-05 17:00:00
 summary: react-query의 개념과 사용법에 대하여
 ---
 
-프론트엔드는 필요할 때 백엔드 API에 데이터를 요청하고 응답을 받아와 화면을 그림
+진행하고 있던 사이드 프로젝트를 고도화하기 위해 다양한 작업을 진행하고 있었다. 프로젝트는 Next.js 기반으로, 데이터를 API로 요청하는 구간은 상황에 따라서 서버, 클라이언트 컴포넌트를 적절히 섞어서 사용하고 있었다.
 
-리액트에서는 주로 useEffect를 활용해 이를 구현
+Next.js는 `fetch`를 확장하여 캐싱 기능을 제공한다. 그래서 서버 렌더링 과정에서의 불필요한 중복 요청을 줄이고자 요청 함수들을 axios에서 `fetch`로 변경하는 작업을 진행했다. 하지만 클라이언트 컴포넌트에서는 Next.js의 `fetch`를 사용할 수 없기 때문에, 클라이언트 컴포넌트에서의 API 요청 최적화는 별도로 진행해야 했다.
 
-그런데 로딩이나 에러등의 처리를 위해 상태를 추가하기 시작하다보면 API 처리 로직이 복잡해짐
+또한, 클라이언트 컴포넌트에서는 `useEffect`와 `useState`를 조합하여 API 요청을 처리하고 있었는데, 로딩이나 에러 처리를 위해 상태를 추가하며 점점 복잡해지고 있던 상황이었다.
 
-react-query가 등장하게 됨
+그러다 react-query 라이브러리가 떠올랐고, 이를 활용하면 API 요청을 훨씬 간결하게 처리할 수 있고 캐싱을 통한 최적화가 가능하다는 것이 생각났다. 그래서 사이드 프로젝트에 도입하게 되었는데, 학습하는 과정에서 생각보다 많은 기능과 활용도가 있다는 것을 알게 되었다.
 
-이 글에서는 react-query의 개념과 기본적인 사용법에 대해 정리해보고자 함
+이 글에서는 react-query의 기본적인 개념과 그 사용법에 대해 정리해 보고자 한다.
 
 ### react-query?
 
-리액트에서 API를 호출할 때 useEffect를 사용해서 주로 핸들링함
+리엑트의 컴포넌트에서 API를 호출할 때에는 주로 `useEffect`를 사용하여 데이터를 패칭하고, `useState`를 사용하여 상태를 관리하는 패턴을 많이 사용한다. 그리고 그 과정에서 로딩을 표현하고 싶거나, 에러를 처리하고 싶을 때에는 상태를 추가하여 핸들링하는 경우가 많다.
 
-데이터 패칭 도중 로딩을 표현하고 싶으면 상태를 추가해 표현함
+```ts
+useEffect(() => {
+  async function fetchData() {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/data");
+      const result = await response.json();
+      setData(result);
+    } catch (error) {
+      setError(error);
+    } finally {
+      setIsLoading(false);
+    }
+  }
 
-그리고 도중에 발생하는 에러를 처리하기 위한 상태를 추가하기도 함
+  fetchData();
+}, []);
+```
 
-(예시 코드 - useQuery를 사용하지 않은 경우)
+위 코드는 `useEffect`를 사용하여 컴포넌트가 마운트될 때 API를 호출하고, 로딩 상태와 에러 상태를 관리하는 간단한 예시이다. 단순한 API 호출 정도는 이 방식으로 충분히 처리할 수 있다.
 
-그렇게 필요한 기능들을 계속 추가하다보면 API 하나 처리하는데 너무 많은 상태를 관리하게 되기 시작하면서 복잡해짐.
+하지만, 한 컴포넌트 안에서 여러 개의 API를 호출하는 경우에는 각 API마다 로딩, 에러, 데이터 상태를 관리해야 하므로 상태가 늘어나게 되어 코드가 복잡해지기 시작한다. 이 경우 커스텀 훅을 정의하여 상태 관리를 어느 정도 해결할 수 있다.
 
-커스텀 훅을 정의하게 되면 어느정도 해결이 가능함
+```ts
+const [data, isLoading, error] = useFetch("/api/data");
+```
 
-하지만 동일한 요청에 대해 중복 요청을 방지하고 싶을 수 있는데, 이를 직접 구현하기엔 너무 복잡해질 수 있음
+커스텀 훅을 정의해 API 호출 처리를 추상화할 수는 있다. 하지만 필요한 기능들을 계속 추가하다 보면, API 하나를 처리하는데 너무 많은 상태를 관리하게 되거나, 원하는 기능을 직접 구현하기에는 너무 복잡해질 수 있다.
 
-이렇게 프론트엔드에서 API를 처리하는 데에 다양한 요구사항이 생기게 되었고, 이를 해결하고자 react-query가 등장하게 됨
+- 캐싱 : 동일한 요청에 대해 중복 요청을 방지하고 싶다.
+- 리페칭 : 특정 시점에 데이터를 다시 가져오고 싶다.
+- 조건부 요청 : 특정 조건에서만 요청을 보내고 싶다.
 
-react-query는 API 처리 과정에서 필요할 수 있는 상태부터 캐싱 기능까지 다양한 기능을 제공함.
+이렇게 프론트엔드에서 API를 처리하는 데에 여러 요구사항이 생기게 되면서, 그 처리 역시 복잡해지기 시작했다. 이런 다양한 상황을 해결하고자 react-query가 등장하게 되었다.
+
+react-query는 API 처리 과정에서 필요할 수 있는 상태를 제공하는 것 부터, 요청에 대한 응답을 캐싱해 재사용하는 기능까지 다양한 기능을 제공한다. 그래서 이를 활용한다면 API 요청을 훨씬 간결하게 처리할 수 있고, 불필요한 네트워크 요청을 줄이는 데에도 도움을 줄 수 있다.
 
 ### react-query 기본 설정
 
-우선 react-query를 사용하기 위해서는 기본 설정을 해줘야 함.
-
-react-query는 다음과 같이 설치할 수 있음. Tanstack으로 변경되어 `@tanstack/react-query`로 설치해야 함.
+react-query는 다음과 같이 설치할 수 있다. Tanstack으로 프로젝트가 이전되었기 때문에 `@tanstack/react-query` 패키지를 설치해야 한다.
 
 ```bash
 npm install @tanstack/react-query
 ```
 
-react-query는 동일한 요청을 캐싱하고 재사용한다. 이를 위해 내부적으로 React의 Context API를 활용하며, 추가적인 설정을 해주어야 함.
+사용하기에 앞서, react-query의 기본 설정을 해주어야 한다.
 
-QueryClient라는 객체를 생성하고, QueryClientProvider를 통해 이 객체를 제공해야 함.
+react-query는 동일한 요청을 캐싱하고 재사용한다. 이를 위해 내부적으로 React의 Context API를 활용하는데, 따라서 앱의 루트에 Provider를 설정해주어야 한다.
 
-(예제 코드 - QueryClientProvider 설정)
+먼저 `QueryClient`라는 객체를 생성하고, 앱을 `QueryClientProvider`로 감싸고 객체를 하위 컴포넌트에 전달해주도록 해야 한다.
 
-QueryClient는 react-query의 핵심 객체로 다음과 같은 역할을 담당한다
+```tsx
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-- 캐시 관리 : 쿼리 데이터를 캐싱하고, 캐시된 데이터를 관리함.
-- 무효화, 대요청 : 특정 쿼리를 무효화하거나, 다시 데이터를 가져오도록 함.
-- 전역 설정 : 쿼리의 기본 설정을 지정할 수 있음.
+const queryClient = new QueryClient();
 
-예를 들어, 쿼리의 기본 캐시 시간을 설정해 전역적으로 적용할 수 있음.
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* 앱 컴포넌트 */}
+    </QueryClientProvider>
+  );
+}
+```
 
-(예제 코드 - QueryClient 설정)
+`QueryClient`는 react-query의 핵심 객체로, 다음과 같은 역할을 담당한다.
 
-이렇게 설정하면, 프로젝트의 Provider 하위 컴포넌트에서 react-query의 훅을 사용할 수 있게 됨.
+- 캐시 관리 : 쿼리 데이터를 캐싱하고 관리하며, 필요할 때 재사용한다.
+- 무효화, 재요청 : 특정 쿼리를 무효화하거나 다시 데이터를 가져올 수 있다.
+- 전역 설정 : 쿼리의 기본 설정을 지정할 수 있다.
 
-이제 react-query의 주요 기능들에 대해 알아보자.
+예를 들어, 특정 옵션을 설정해 전역적으로 적용할 수 있다.
+
+```ts
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5 // 캐시를 5분 동안 유지한다.
+    }
+  }
+});
+```
+
+이렇게 설정하면, 다음에 설명할 `useQuery` 훅을 사용할 때, 별도로 `staleTime`을 지정하지 않으면 기본적으로 5분 동안 캐시가 유지된다. 이 외에도 쿼리와 뮤테이션에 대한 다양한 기본 옵션을 지정할 수 있다.
+
+`QueryClient`는 앱 전체에서 하나만 생성하여 사용하는 것이 일반적이다. 여러 개를 생성하여 사용할 수도 있지만, 그렇게 할 경우 캐시가 분리되어 관리되므로 주의해야 한다.
+
+react-query는 개발자 도구도 제공한다. 개발자 도구를 활용하면, 현재 캐시된 쿼리와 상태를 쉽게 확인할 수 있어 디버깅에 용이하다. 별도의 패키지로 분리되어 있으며, 추가로 설치해야 한다.
+
+```bash
+npm install @tanstack/react-query-devtools
+```
+
+설정법은 간단한데, `QueryClientProvider` 하위에 `ReactQueryDevtools` 컴포넌트를 추가해주면 된다.
+
+```tsx
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {/* 앱 컴포넌트 */}
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
+  );
+}
+```
+
+`initialIsOpen` 옵션을 통해 개발자 도구의 초기 열림 상태를 지정할 수 있으며, 기본값은 `false`이다. 기타 옵션은 [공식 문서](https://tanstack.com/query/v5/docs/framework/react/devtools)를 참고하면 된다.
+
+기본적인 설정은 끝났고, 이제 react-query의 주요 기능들에 대해 알아보자.
 
 ### useQuery
 
