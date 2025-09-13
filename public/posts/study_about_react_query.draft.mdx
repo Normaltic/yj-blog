@@ -116,6 +116,7 @@ npm install @tanstack/react-query-devtools
 
 ```tsx
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -126,40 +127,199 @@ function App() {
 }
 ```
 
-`initialIsOpen` 옵션을 통해 개발자 도구의 초기 열림 상태를 지정할 수 있으며, 기본값은 `false`이다. 기타 옵션은 [공식 문서](https://tanstack.com/query/v5/docs/framework/react/devtools)를 참고하면 된다.
+그러면 앱 우측 하단에 개발자 도구 아이콘이 표시된다. 클릭하면 개발자 도구가 열리며, 현재 캐시된 쿼리와 상태를 확인할 수 있다.
+
+![사진 1) react-query devtools](../images/study_about_react_query/react_query_devtools.png)
+
+`initialIsOpen` 옵션을 통해 개발자 도구의 초기 열림 상태를 지정할 수 있으며, 기본값은 `false`이다. 기타 옵션은 [공식 문서 - DevTool](https://tanstack.com/query/v5/docs/framework/react/devtools)를 참고하면 된다.
 
 기본적인 설정은 끝났고, 이제 react-query의 주요 기능들에 대해 알아보자.
 
 ### useQuery
 
-`useQuery`는 react-query에서 가장 기본이 되는 훅으로, 데이터를 가져오기 위한 기본 도구임.
+`useQuery`는 react-query에서 가장 기본이 되는 훅이자, 라이브러리를 사용할 때 가장 많이 접하게 되는 기능이다.
 
-API 요청을 처리하면서도 로딩, 에러, 데이터 상태를 자동으로 관리해주기 떄문에 `useEffect`와 `useState`를 직접 조합하는 것보다 훨씬 간결함.
+단순히 API 요청을 처리해 데이터를 가져오는 역할만 하는 것이 아니라, 로딩, 에러, 데이터 상태를 자동으로 관리해준다. 그래서 앞서 봤던 `useEffect`와 `useState`를 직접 조합하는 것보다 훨씬 간결하게 사용할 수 있다. 또한, 중복 요청을 방지하며 캐싱 기능을 제공해 불필요한 네트워크 요청을 줄이는 데에도 도움을 준다.
 
-(예제 코드 - useQuery 사용 예시)
+```tsx
+const getTodos = async (): Promise<Todo[]> => {
+  const response = await fetch("/api/todos");
+  if (!response.ok) {
+    throw new Error("Failed to fetch todos");
+  }
+  return response.json();
+};
 
-코드는 훅에 옵션을 전달하고, 반환된 상태를 활용해 로딩, 에러, 데이터를 처리함.
+function TodoList() {
+  const { data: todos = [], isFetching } = useQuery({
+    queryKey: ["todos"],
+    queryFn: () => getTodos()
+  });
 
-`useQuery`는 다음과 같은 상태를 반환함
+  if (isFetching) return <div>Loading...</div>;
 
-반환값 몇 개 설명(isLoading, isError, data, error, refetch )
+  return (
+    <section>
+      <ul>
+        {todos.map((todo) => (
+          <li key={todo.id}>{todo.text}</li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+```
 
-isLoading, isFetching 차이
+위 코드는 `useQuery`를 사용해 `/api/todos`에서 데이터를 가져오는 예시이다. API를 호출해 데이터를 반환하는 `getTodos` 함수를 정의하고, `useQuery` 훅에 전달해 데이터를 가져오고 있다. 그리고 반환된 상태를 활용해 로딩을 표현하고, 데이터를 화면에 렌더링한다.
 
-( gif - isLoading과 isFetching의 차이? )
+`useQuery` 훅을 적절히 활용한다면 API 요청을 훨씬 간결하게 처리할 수 있고, 필요한 상태를 참조하여 다양한 동작을 수행할 수 있다. `useEffect`와 `useState`를 조합하는 것보다 훨씬 깔끔해진다.
 
-`useQuery`는 다음과 같은 인자를 받음
+또한, react-query는 API 핸들링을 간결하게 표현하는 것에 그치지 않고, 내부적으로 요청에 대한 응답을 캐싱하고 제어하는 기능을 수행한다. 그래서 동일한 요청에 대해 이미 가져온 데이터를 재사용하여 불필요한 네트워크 요청을 줄여준다.
 
-인자 몇 개 설명( queryKey, queryFn, select, enabled )
+react-query에서는 이 캐시를 **쿼리(Query)** 단위로 관리한다. react-query에서 말하는 **쿼리**는 단순한 API 호출이 아니라, 특정 데이터를 가져오기 위한 요청 단위를 의미한다. 그래서 react-query는 쿼리를 기준으로 데이터를 캐싱하고 재사용하거나 무효화한다.
 
-쿼리 키 설명 및 설계
+그래서 `useQuery` 훅은 쿼리를 정의하고 관리하는 역할을 하며, 그 쿼리에 대한 상태를 다루는 훅이라고 할 수 있다.
 
-- 문자열 vs 배열
-- 배열에 변수도 적용할 수 있음
+쿼리는 다양한 옵션을 통해 제어할 수 있으며, `useQuery` 훅은 옵션들을 인자로 받아 쿼리의 동작을 정의한다. 대표적으로 다음과 같은 옵션들이 있다.
 
-queryFn 설명
+- `queryKey`: 쿼리를 식별하는 고유한 키
+- `queryFn`: 쿼리가 실행될 때 호출되는 함수
+- `select`: 쿼리 결과를 가공하는 함수
+- `enabled`: 쿼리의 활성화 여부를 제어하는 불리언
 
-select 설명
+`queryKey`는 react-query에서 쿼리를 식별하는 고유한 키이다. 같은 `queryKey`를 가지는 쿼리는 동일한 쿼리로 간주되며, 이 키를 기준으로 캐싱하여 재사용하거나 무효화한다. 따라서 `queryKey`는 쿼리를 구분하는 중요한 역할을 한다.
+
+```ts
+const { ... } = useQuery({
+  queryKey: ["todos"],
+  ...
+});
+```
+
+`queryKey`는 배열 형식으로 정의할 수 있고, 배열의 각 요소는 쿼리를 구분하는 데 사용된다. 위 예시에서는 `["todos"]`라는 배열을 사용하여 `todos` 쿼리를 정의하고 있다.
+
+react-query는 이 `queryKey`에 전달된 배열을 통해서 각 쿼리를 식별하고 구분한다. 그래서 동일한 키를 가진 쿼리가 다른 위치에서 호출되더라도, 중복 호출을 막고 동일한 데이터를 바라보게 된다.
+
+```ts
+// component A
+const { ... } = useQuery({
+  queryKey: ["todos"],
+  ...
+});
+
+// component B
+const { ... } = useQuery({
+  queryKey: ["todos"],
+  ...
+});
+```
+
+이 경우, `component A`와 `component B`에서 동일한 `queryKey`를 사용하고 있으므로, react-query는 이를 동일한 쿼리로 인식한다. 따라서, 두 컴포넌트가 마운트될 때 각각 API를 호출하는 것이 아니라, 한 번만 호출하여 데이터를 가져오고, 두 컴포넌트 모두 동일한 데이터를 바라보게 된다.
+
+`queryKey` 배열은 복수개의 아이템이 포함될 수 있으며, 이를 통해 쿼리를 더욱 세분화 할 수 있다. `["todos", "create"]`와 같이 배열에 여러 개의 요소를 포함하여, 쿼리를 구분할 수 있다.
+
+`queryKey`를 조금 자세히 설명해보자면, 우선 배열의 순서 역시 식별의 기준이 된다. 예를 들어, `["todos", "create"]`와 `["create", "todos"]`는 서로 다른 쿼리로 간주된다. 따라서, 동일한 API를 호출하더라도, `queryKey`의 순서가 다르면 별도의 캐시가 관리된다.
+
+배열의 각 요소에는 문자열 뿐만 아니라 숫자, 불리언, 객체 등 다양한 타입을 사용할 수 있다. 그래서 동적인 값을 포함하여 쿼리를 구분하여, 특정 변수에 따라 세분화할 수 있다. 이 때, `queryKey`에 포함된 값이 변경되면, react-query는 이를 새로운 쿼리로 인식하고, `queryFn`을 다시 실행하여 데이터를 가져온다.
+
+```ts
+const { ... } = useQuery({
+  queryKey: ["todos", todoId],
+  queryFn: () => getTodoById(todoId),
+});
+```
+
+위 예시에서는 `todoId`라는 변수를 `queryKey`에 포함하여, 특정 ID에 해당하는 TODO 아이템을 가져오는 쿼리를 정의하고 있다. 이 경우 `todoId`가 변경될 때마다 서로 다른 쿼리로 인식되며 별도의 캐시가 관리된다. 그러므로 동적인 값을 포함한 쿼리를 정의(동적인 변수를 참조해 API를 호출)할 때에는 `queryKey`에 해당 변수를 포함시켜야 캐시가 올바르게 분리된다.
+
+또한, `queryKey`는 객체를 포함할 수 있어 아래와 같은 형태로도 정의할 수 있다.
+
+```ts
+const { ... } = useQuery({
+  queryKey: ["todos", { filter: "done" }],
+  queryFn: () => getTodos({ filter: "done" }),
+});
+```
+
+이 때, 객체의 속성 순서는 상관없다. react-query에서는 `queryKey`를 직렬화된 형태로 해시를 만들고, 이 해시를 기준으로 쿼리를 구분한다고 한다. 따라서, `["todos", { filter: "done", page: 1 }]`와 `["todos", { page: 1, filter: "done" }]`는 동일한 쿼리로 인식된다.
+
+실제로 다음과 같은 코드를 작성하고 DevTool에서 확인해보면, 동일한 쿼리로 인식되어 하나의 쿼리만 보이는 것을 알 수 있다.
+
+```ts
+useQuery({
+  queryKey: ["todos", { filter: "done", page: 1 }],
+  queryFn: () => getTodos()
+});
+
+useQuery({
+  queryKey: ["todos", { page: 1, filter: "done" }],
+  queryFn: () => getTodos()
+});
+```
+
+![사진 1) 한 개만 보인다.](../images/study_about_react_query/display_only_one_query.png)
+
+> 정확히 어떤 비교를 수행하는지 찾아보려 했으나, 추측하기로는 [@tanstack/react-query - hashKey](https://github.com/TanStack/query/blob/main/packages/query-core/src/utils.ts#L216) 함수 통해 문자열로 변환 후 비교하는 것으로 보인다.
+
+[공식문서 - Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)에서도 `queryKey`에 대한 설명을 확인할 수 있다.
+
+`queryFn`은 쿼리가 실행될 때 실제로 데이터를 가져오는 함수이다. 이 함수는 비동기여야 하며, 반드시 Promise를 반환해야 한다. react-query는 이 함수의 결과를 기다렸다가 성공/실패 여부에 따라 상태를 업데이트 한다.
+
+```ts
+const getTodos = async (): Promise<Todo[]> => {
+  const response = await fetch("/api/todos");
+  if (!response.ok) {
+    throw new Error("Failed to fetch todos");
+  }
+  return response.json();
+};
+
+const { data: todos = [], isFetching } = useQuery({
+  queryKey: ["todos"],
+  queryFn: () => getTodos()
+});
+```
+
+`queryFn` 내부에서 에러가 발생한다면, react-query는 이를 감지하여 반환하는 `isError`, `error` 상태를 업데이트 한다.
+
+`queryFn`은 `context`객체를 인자로 받을 수 있는데, 이 객체에는 `queryKey`와 `AbortController`의 신호인 `signal`이 포함되어 있다. 이를 활용해 동적인 쿼리를 정의하거나, 쿼리가 취소될 때 요청을 중단할 수 있다.
+
+```ts
+const getTodos = async ({
+  queryKey,
+  signal
+}: {
+  queryKey: string[];
+  signal: AbortSignal;
+}): Promise<Todo[]> => {
+  const [, todoId] = queryKey;
+  const response = await fetch(`/api/todos${todoId}`, { signal });
+  if (!response.ok) {
+    throw new Error("Failed to fetch todos");
+  }
+  return response.json();
+};
+
+const { data: todos = [], isFetching } = useQuery({
+  queryKey: ["todos"],
+  queryFn: getTodos
+});
+```
+
+쿼리 취소는 `useQuery`가 언마운트되거나 `queryKey`가 변경될 때, 혹은 `QueryClient`를 통해 쿼리를 직접 취소할 때 발생한다. 직접 취소는 기회가 될 때 다뤄보고자 한다.
+
+`select`는 쿼리의 결과 데이터를 가공하는 함수이다. `queryFn`에서 반환된 데이터를 받아서, 컴포넌트에서 필요한 형태로 가공하여 반환할 수 있다.
+
+```ts
+const { data: todoTitles = [], isFetching } = useQuery({
+  queryKey: ["todos"],
+  queryFn: () => getTodos(),
+  select: (data) => data.map((todo) => todo.title)
+});
+```
+
+`queryFn`에서도 데이터를 가공할 수 있겠지만, 쿼리 캐시는 `queryFn` 에서 반환된 원본 데이터를 기준으로 관리된다. 그래서 데이터 가공은 `select` 사용이 권장되며, 이를 통해 캐시된 원본 데이터를 유지하면서 컴포넌트에서 필요한 형태로 데이터를 가공하여 사용할 수 있다.
+
+`select` 함수는 쿼리 데이터가 바뀔 때마다 다시 실행된다. 그래서 해당 쿼리의 캐시가 갱신될 경우 `select`가 다시 실행되어 최신 데이터를 가공하여 반환한다. 또한, 해당 함수에서 반환한 값은 메모이제이션되어, 쿼리 데이터가 변경되지 않는 한 동일한 참조를 유지한다. 따라서, `select`를 통해 가공된 데이터를 의존성 배열에 포함하여도 불필요한 업데이트가 발생하지 않는다.
 
 enabled 설명
 
@@ -172,6 +332,38 @@ keepPreviousData 언급
 ( gif - 데이터 로딩 도중 이전 데이터가 유지되는 것 )
 
 initialData 설명
+
+`useQuery`의 반환값에 대해 알아보면, 대표적으로 다음과 같은 상태들을 반환한다.
+
+- `data`: 쿼리의 결과 데이터
+- `isLoading`: 쿼리가 로딩 중인지 여부
+- `isFetching`: 쿼리가 패칭 중인지 여부
+- `refetch`: 쿼리를 다시 실행하는 함수
+- `error`: 쿼리에서 발생한 에러 정보
+
+`data`는 쿼리의 결과 데이터를 담고 있다. 쿼리가 성공적으로 완료되면, 이 값에 API에서 반환된 데이터가 들어오게 된다. 만약 쿼리가 아직 완료되지 않았거나, 에러가 발생한 경우에는 `undefined`가 될 수 있다. 이 값의 타입은 `queryFn`에서 반환하는 데이터의 타입으로, 제네릭을 통해 지정할 수도 있다.
+
+```ts
+const { ... } = useQuery<Todo[]>({
+  ...
+});
+```
+
+또한, `select` 옵션에 의해 가공된 형태로 사용할 수 있으며, `placeholderData`, `initialData` 옵션으로 쿼리가 완료되기 전까지의 `data`의 초기값을 지정할 수도 있다.
+
+`useQuery`에서 반환하는 상태 중 `isLoading`과 `isFetching`이 있다. 이름만 보아서는 비슷해 보이지만, 약간의 차이가 있다.
+
+`isLoading`은 쿼리가 처음 로딩되는 상태를 나타낸다. 즉, 앱 내부에서 쿼리가 처음 실행되어 데이터를 가져오는 중일 때 `true`가 된다. 다르게 표한한다면, 캐시에 데이터가 없어서 네트워크 요청을 보내 데이터를 가져오는 중일 때 `true`가 된다.
+
+`isFetching`은 쿼리가 패칭되는 상태를 나타낸다. 즉, 이미 데이터를 불러온 상태에서 최신 데이터를 가져오는 중일 때 `true`가 된다. 이 상태는 쿼리가 이미 성공적으로 완료된 후에, 수동으로 `refetch`를 호출하거나, 쿼리가 자동으로 다시 패칭되는 경우에 해당한다.
+
+만약, 컴포넌트가 마운트 되었고, 특정 시점에 `refetch`를 호출해 데이터를 다시 불러온다면, `isLoading`과 `isFetching`은 다음과 같다.
+
+![사진 2) isLoading vs isFetching](../images/study_about_react_query/isLoading_isFetching.png)
+
+초기 로딩 시점에는 `isLoading`과 `isFetching`이 모두 `true`가 된다. 그리고 `refetch`로 데이터를 다시 받아오는 시점에는 `isLoading`은 `false`가 되고, `isFetching`은 `true`가 된다. 따라서, 첫 로딩 상태를 표현하고 싶다면 `isLoading`을, 이미 데이터를 받아온 상태에서 다시 데이터를 가져오는 중임을 표현하고 싶다면 `isFetching`을 사용할 수 있다.
+
+반환값 몇 개 설명(isLoading, isError, data, error, refetch )
 
 이를 활용한다면, API를 호출해 데이터를 가져오는 작업을 훨씬 깔끔하게 선언할 수 있고, 필요한 상태를 쉽게 활용할 수 있음.
 
