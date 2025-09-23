@@ -139,7 +139,7 @@ function App() {
 
 `useQuery`는 react-query에서 가장 기본이 되는 훅이자, 라이브러리를 사용할 때 가장 많이 접하게 되는 기능이다.
 
-단순히 API 요청을 처리해 데이터를 가져오는 역할만 하는 것이 아니라, 로딩, 에러, 데이터 상태를 자동으로 관리해준다. 그래서 앞서 봤던 `useEffect`와 `useState`를 직접 조합하는 것보다 훨씬 간결하게 사용할 수 있다. 또한, 중복 요청을 방지하며 캐싱 기능을 제공해 불필요한 네트워크 요청을 줄이는 데에도 도움을 준다.
+단순히 API 요청을 처리해 데이터를 가져오는 역할만 하는 것이 아니라, 로딩, 에러, 데이터 상태를 자동으로 관리해준다. 그래서 앞서 봤던 `useEffect`와 `useState`를 직접 조합하는 것보다 훨씬 간결하게 사용할 수 있다.
 
 ```tsx
 const getTodos = async (): Promise<Todo[]> => {
@@ -151,12 +151,12 @@ const getTodos = async (): Promise<Todo[]> => {
 };
 
 function TodoList() {
-  const { data: todos = [], isFetching } = useQuery({
+  const { data: todos = [], isLoading } = useQuery({
     queryKey: ["todos"],
     queryFn: () => getTodos()
   });
 
-  if (isFetching) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <section>
@@ -216,16 +216,16 @@ const { ... } = useQuery({
 
 이 경우, `component A`와 `component B`에서 동일한 `queryKey`를 사용하고 있으므로, react-query는 이를 동일한 쿼리로 인식한다. 따라서, 두 컴포넌트가 마운트될 때 각각 API를 호출하는 것이 아니라, 한 번만 호출하여 데이터를 가져오고, 두 컴포넌트 모두 동일한 데이터를 바라보게 된다.
 
-`queryKey` 배열은 복수개의 아이템이 포함될 수 있으며, 이를 통해 쿼리를 더욱 세분화 할 수 있다. `["todos", "create"]`와 같이 배열에 여러 개의 요소를 포함하여, 쿼리를 구분할 수 있다.
+`queryKey` 배열은 복수개의 아이템이 포함될 수 있으며, 이를 통해 쿼리를 더욱 세분화 할 수 있다. `["todos", "create"]`와 같이 배열에 여러 개의 요소를 포함하여 쿼리를 상세하게 구분할 수 있다.
 
 `queryKey`를 조금 자세히 설명해보자면, 우선 배열의 순서 역시 식별의 기준이 된다. 예를 들어, `["todos", "create"]`와 `["create", "todos"]`는 서로 다른 쿼리로 간주된다. 따라서, 동일한 API를 호출하더라도, `queryKey`의 순서가 다르면 별도의 캐시가 관리된다.
 
-배열의 각 요소에는 문자열 뿐만 아니라 숫자, 불리언, 객체 등 다양한 타입을 사용할 수 있다. 그래서 동적인 값을 포함하여 쿼리를 구분하여, 특정 변수에 따라 세분화할 수 있다. 이 때, `queryKey`에 포함된 값이 변경되면, react-query는 이를 새로운 쿼리로 인식하고, `queryFn`을 다시 실행하여 데이터를 가져온다.
+배열의 각 요소에는 문자열 뿐만 아니라 숫자, 불리언, 객체 등 다양한 타입을 사용할 수 있다. 그래서 동적인 값을 포함해 쿼리를 구분하여, 특정 변수의 값에 따라 세분화할 수 있다. 이 때, `queryKey`에 포함된 값이 변경되면, react-query는 이를 새로운 쿼리로 인식하고, `queryFn`을 다시 실행하여 데이터를 가져온다.
 
 ```ts
 const { ... } = useQuery({
   queryKey: ["todos", todoId],
-  queryFn: () => getTodoById(todoId),
+  queryFn: () => getTodo(todoId),
 });
 ```
 
@@ -256,9 +256,9 @@ useQuery({
 });
 ```
 
-![사진 1) 한 개만 보인다.](../images/study_about_react_query/display_only_one_query.png)
+![사진 2) 한 개만 보인다.](../images/study_about_react_query/display_only_one_query.png)
 
-> 정확히 어떤 비교를 수행하는지 찾아보려 했으나, 추측하기로는 [@tanstack/react-query - hashKey](https://github.com/TanStack/query/blob/main/packages/query-core/src/utils.ts#L216) 함수 통해 문자열로 변환 후 비교하는 것으로 보인다.
+> 정확히 어떤 비교를 수행하는지 찾아보려 했으나, 추측하기로는 [@tanstack/react-query - hashKey](https://github.com/TanStack/query/blob/main/packages/query-core/src/utils.ts#L216) 함수를 통해 문자열로 변환 후 비교하는 것으로 보인다.
 
 [공식문서 - Query Keys](https://tanstack.com/query/latest/docs/framework/react/guides/query-keys)에서도 `queryKey`에 대한 설명을 확인할 수 있다.
 
@@ -273,7 +273,7 @@ const getTodos = async (): Promise<Todo[]> => {
   return response.json();
 };
 
-const { data: todos = [], isFetching } = useQuery({
+const { data: todos = [] } = useQuery({
   queryKey: ["todos"],
   queryFn: () => getTodos()
 });
@@ -284,7 +284,7 @@ const { data: todos = [], isFetching } = useQuery({
 `queryFn`은 `context`객체를 인자로 받을 수 있는데, 이 객체에는 `queryKey`와 `AbortController`의 신호인 `signal`이 포함되어 있다. 이를 활용해 동적인 쿼리를 정의하거나, 쿼리가 취소될 때 요청을 중단할 수 있다.
 
 ```ts
-const getTodos = async ({
+const getTodo = async ({
   queryKey,
   signal
 }: {
@@ -292,46 +292,166 @@ const getTodos = async ({
   signal: AbortSignal;
 }): Promise<Todo[]> => {
   const [, todoId] = queryKey;
-  const response = await fetch(`/api/todos${todoId}`, { signal });
+  const response = await fetch(`/api/todos/${todoId}`, { signal });
   if (!response.ok) {
     throw new Error("Failed to fetch todos");
   }
   return response.json();
 };
 
-const { data: todos = [], isFetching } = useQuery({
-  queryKey: ["todos"],
-  queryFn: getTodos
+const { data: todos = [] } = useQuery({
+  queryKey: ["todos", todoId],
+  queryFn: getTodo
 });
 ```
 
-쿼리 취소는 `useQuery`가 언마운트되거나 `queryKey`가 변경될 때, 혹은 `QueryClient`를 통해 쿼리를 직접 취소할 때 발생한다. 직접 취소는 기회가 될 때 다뤄보고자 한다.
+쿼리 취소는 `useQuery`가 언마운트되거나 `queryKey`가 변경될 때, 혹은 `QueryClient`를 통해 쿼리를 직접 취소할 때 발생한다. 쿼리를 직접 취소하는 방식은 기회가 될 때 다뤄보고자 한다.
 
-`select`는 쿼리의 결과 데이터를 가공하는 함수이다. `queryFn`에서 반환된 데이터를 받아서, 컴포넌트에서 필요한 형태로 가공하여 반환할 수 있다.
+`select`는 쿼리의 결과 데이터를 가공하는 함수이다. 쿼리 결과를 컴포넌트에서 필요한 형태로 가공하는데에 사용된다.
 
 ```ts
-const { data: todoTitles = [], isFetching } = useQuery({
+const { data: todoTitles = [] } = useQuery({
   queryKey: ["todos"],
   queryFn: () => getTodos(),
   select: (data) => data.map((todo) => todo.title)
 });
 ```
 
-`queryFn`에서도 데이터를 가공할 수 있겠지만, 쿼리 캐시는 `queryFn` 에서 반환된 원본 데이터를 기준으로 관리된다. 그래서 데이터 가공은 `select` 사용이 권장되며, 이를 통해 캐시된 원본 데이터를 유지하면서 컴포넌트에서 필요한 형태로 데이터를 가공하여 사용할 수 있다.
+정확히는, `select` 함수는 `queryFn`이 반환한 값을 직접 받는 것이 아니라, 해당 쿼리 키에 대응하는 캐시에 저장된 데이터를 받아 가공한다.
+
+물론 `queryFn`에서도 데이터를 가공할 수 있겠지만, 쿼리 캐시는 `queryFn` 에서 반환된 데이터를 기준으로 관리된다. 그래서 데이터 가공은 `select` 사용이 권장되며, 이를 통해 캐시된 원본 데이터를 유지하면서 컴포넌트에서 필요한 형태로 데이터를 가공하여 사용할 수 있다.
 
 `select` 함수는 쿼리 데이터가 바뀔 때마다 다시 실행된다. 그래서 해당 쿼리의 캐시가 갱신될 경우 `select`가 다시 실행되어 최신 데이터를 가공하여 반환한다. 또한, 해당 함수에서 반환한 값은 메모이제이션되어, 쿼리 데이터가 변경되지 않는 한 동일한 참조를 유지한다. 따라서, `select`를 통해 가공된 데이터를 의존성 배열에 포함하여도 불필요한 업데이트가 발생하지 않는다.
 
-enabled 설명
+`useQuery`는 컴포넌트가 마운트될 때 자동으로 쿼리를 실행한다. 하지만, 특정 조건에서만 쿼리를 실행하고 싶을 때가 있다. 이 때 `enabled` 옵션을 활용할 수 있다.
 
-placeholderData 설명
+```ts
+const { data: todos = [] } = useQuery({
+  queryKey: ["todos", todoId],
+  queryFn: getTodo,
+  enabled: !!todoId
+});
+```
 
-( gif - data가 placeholderData로 초기화 되는 것 )
+위 코드는 `enabled`를 활용해 `todoId`가 존재할 때에만 쿼리를 실행하도록 설정한 예시이다.
 
-keepPreviousData 언급
+`enabled` 옵션은 boolean 값으로, `false`인 경우 쿼리는 실행되지 않으며, `true`로 변경되는 시점에 쿼리가 실행된다. 그래서 이를 활용한다면 조건부 요청을 간단하게 구현할 수 있다.
 
-( gif - 데이터 로딩 도중 이전 데이터가 유지되는 것 )
+`placeholderData`는 쿼리가 실제 데이터를 가져오기 전까지 사용할 수 있는 임시 데이터를 지정하는 옵션이다. 이 데이터를 지정하면, 쿼리가 로딩 중일 때에 `data`에 해당 값이 들어오게 된다.
 
-initialData 설명
+```ts
+const { data: todos } = useQuery({
+  queryKey: ["todos"],
+  queryFn: () => getTodos()
+});
+
+useEffect(() => {
+  console.log(todos);
+}, [todos]);
+```
+
+`data`의 기본값은 `undefined`이다. 그래서 위 코드를 실행시키면 `todos`가 처음에는 `undefined`로 출력되고, 데이터가 로딩된 후에야 실제 데이터가 출력된다.
+
+![사진 3) undefined에서 실제 데이터로](../images/study_about_react_query/undefined_to_real_data.png)
+
+`placeholderData`는 이 로딩되기 전의 임시 상태를 지정하는데에 사용된다.
+
+```ts
+const { data: todos } = useQuery({
+  ...
+  placeholderData: []
+});
+```
+
+위와 같이 `placeholderData`를 빈 배열로 지정하면, 쿼리가 로딩 중일 때에도 `todos`는 빈 배열이 된다. 그래서 컴포넌트가 처음 렌더링될 때에도 `todos`가 항상 배열 형태를 유지하게 된다.
+
+그런데 `placeholderData`가 `data`의 기본 값을 지정하는 것이라면, `data = []` 처럼 사용할 수도 있다. 그렇다면 `placeholderData`는 왜 필요한 것인가?
+
+`data = []`는 `undefined`를 방지하기 위해 값을 지정하는 것으로, 자바스크립트 문법일 뿐이다. 그래서 react-query 입장에서는 여전히 해당 쿼리에 대한 데이터가 없는 상태로 취급된다. 반면, `placeholderData`에 할당된 값은 쿼리의 데이터를 불러오기 전까지 임시로 반환되는 값이다. 따라서 react-query 입장에서 임시 데이터를 전달 받기 때문에 `select` 같은 데이터 가공 로직도 즉시 동작할 수 있다.
+
+정리하자면, `data = []`는 자바스크립트 문법으로 `undefined`를 방지하는 것이고, `placeholderData`는 해당하는 쿼리의 임시 값을 설정하는 것이다.
+
+한편, 다음과 같은 쿼리가 있다고 해보자.
+
+```ts
+const [page, setPage] = useState(1);
+
+const { data: { todos, totalPages } = { todos: [], totalPages: 0 } } = useQuery(
+  {
+    queryKey: ["todos", page],
+    queryFn: () => getTodos({ page }),
+    placeholderData: { todos: [], totalPages: 0 }
+  }
+);
+```
+
+이는 페이지네이션을 구현하기 위한 쿼리이고, `page`라는 변수를 기준으로 페이지의 데이터를 가져오고 있다. `queryKey`에는 `page`가 포함되어 있어, 페이지가 변경될 때마다 새로운 쿼리가 생성되고, `queryFn`이 다시 실행되어 데이터를 가져오게 된다.
+
+컴포넌트가 마운트되고 첫 쿼리가 실행될 때에는 페이지 1의 데이터를 가져오게 된다. 이 때, `placeholderData`가 빈 배열로 지정되어 있으므로, 페이지 1의 기본 값은 빈 배열이 된다.
+
+페이지 1을 보고 있는 상황에서, 페이지 2로 넘어가고 싶어 버튼을 클릭했다고 해보자. `page`가 1에서 2로 변경되면서 새로운 쿼리가 생성되고, `queryFn`이 다시 실행되어 페이지 2의 데이터를 가져오게 된다. 이 때, 페이지 2의 기본 값 역시 `placeholderData`에 의해 빈 배열이 된다.
+
+이 경우, `todos`는 페이지 1의 데이터에서 페이지 2의 데이터로 바로 변경된다. 그래서 페이지 2의 데이터가 로딩되는 동안에는 `todos`가 빈 배열이 된다. 마운트 시점부터의 `todos`의 값은 이렇게 바뀐다.
+
+```text
+[] -> [page 1 데이터] -> [] -> [page 2 데이터]
+```
+
+페이지가 변경될 때 해당 페이지에 대한 캐시가 없다면 `todos`는 빈 배열로 바뀌게 되며, 페이지가 바뀔 때마다 화면이 깜빡이는 현상이 발생할 수 있다.
+
+![사진 4) 페이지 전환 중 깜빡임](../images/study_about_react_query/splash_screen.gif)
+
+이 때, `keepPreviousData`라는 함수를 사용할 수 있겠다. `keepPreviousData`는 react-query에서 제공하는 유틸 함수로, 새 요청이 진행되는 동안에도 이전 데이터가 유지된다. 즉, 다음 페이지 데이터를 불러오는 동안에도 이전 페이지의 데이터가 화면에 표시되다가, 새로운 데이터가 도착하면 교체되는 방식이다.
+
+```tsx
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+
+const { ... } = useQuery({
+  placeholderData: keepPreviousData,
+});
+```
+
+`keepPreviousData` 함수를 불러와 `placeholderData`에 할당하는 방식으로 적용할 수 있다. 이렇게 설정하면, 페이지가 변경될 때에도 이전 페이지의 데이터가 유지되므로 화면이 깜빡이지 않고 전환된다.
+
+> react-query@5 부터 유틸 함수로 분리되었으며, 이전에는 `keepPreviousData` 옵션을 직접 `true`로 지정하는 방식이었다.
+
+![사진 5) 이전 데이터를 유지함](../images/study_about_react_query/keep_previous_data.gif)
+
+`initialData`는 쿼리의 초기 데이터를 지정하는 옵션이다. 이를 설정하면 해당 값이 쿼리의 데이터로 사용되며, 쿼리가 즉시 데이터를 가진 상태로 시작한다.
+
+```ts
+const { data: todos } = useQuery({
+  ...
+  initialData: []
+});
+```
+
+단순히 설명만 들어서는 `placeholderData`와 비슷해 보이지만, 차이가 있다.
+
+`placeholderData`는 쿼리의 임시 데이터 역할을 한다. 그래서 쿼리가 실행되어 실제 데이터가 도착하면 교체된다. 반면, `initialData`는 해당 값 자체를 쿼리의 **실제 초기 데이터**로 간주한다. 따라서 `initialData`는 쿼리의 캐시에 저장되며, 최신 상태로 취급되어 쿼리가 즉시 데이터를 가진 상태로 시작한다. 즉, `placeholderData`는 쿼리가 데이터를 가져오기 전까지 임시로 사용하는 값이고, `initialData`는 쿼리의 실제 초기 데이터로 캐시에 저장되는 값이라는 점에서 구분된다.
+
+그래서 `initialData`는 해당 쿼리의 결과를 미리 알고 있을 때, 이를 초기 데이터로 지정하여 쿼리가 즉시 데이터를 가진 상태로 시작하고자 할 때 유용하다.
+
+`initialData`로 설정한 데이터는 최신 상태로 취급되기 때문에, `queryFn`이 실행되지 않고 캐시된 데이터를 사용하게 된다. 그리고 다음에 설명할 `staleTime` 옵션과 함께 사용한다면, `staleTime`이 지난 후에 `queryFn`이 실행되어 최신 데이터를 가져오게 된다. `staleTime`의 기본값은 0이기 때문에, 별도의 설정이 없다면 `initialData`를 지정하더라도 즉시 `queryFn`이 실행되어 데이터를 다시 가져오게 된다.
+
+이 설정값은 해당 쿼리의 캐시에 이미 데이터가 존재하는 경우에는 적용되지 않는다. 그래서 쿼리가 이미 캐시에 데이터를 가지고 있다면, `initialData`는 적용되지 않고 캐시된 데이터가 사용된다.
+
+쿼리의 결과는 캐시되어 재사용된다. 그런데 저장된 캐시는 특정 시점이 지난 이후에 최신 상태가 아니게 될 수 있다. 그래서 이 쿼리의 유효 기간을 지정하는 `staleTime` 옵션이 있다.
+
+`staleTime`은 쿼리의 데이터가 최신 상태로 간주되는 기간을 밀리초 단위로 지정하는 옵션이다. 이 시간이 지나면 해당 쿼리의 데이터는 오래된 상태로 간주되어, 필요에 따라 `queryFn`이 다시 실행되어 최신 데이터를 가져오게 된다.
+
+```ts
+const { data: todos } = useQuery({
+  ...
+  staleTime: 1000 * 60 * 5 // 5분
+});
+```
+
+위 예시 처럼 `staleTime`을 5분으로 지정하면, 쿼리가 데이터를 가져온 후 5분 동안은 해당 데이터가 최신 상태로 간주된다. 이 시간 동안 동일한 `queryKey`를 사용하는 다른 쿼리가 실행되더라도 네트워크 요청이 발생하지 않고 캐시된 데이터를 재사용한다. 그리고 5분이 지나면 해당 쿼리의 데이터는 오래된 상태로 간주되어, 필요에 따라 `queryFn`이 다시 실행되어 최신 데이터를 가져오게 된다.
+
+이 설정을 활용하면 불필요한 네트워크 요청을 줄이고 캐시를 재사용해 성능을 최적화할 수 있다. 예를 들어, 자주 변경되지 않는 데이터를 가져오는 쿼리에는 긴 `staleTime`을 설정하여 캐시를 오래 유지하고, 자주 변경되는 데이터를 가져오는 쿼리에는 짧은 `staleTime`을 설정하여 최신 상태를 유지할 수 있다.
+
+이 외에도, 윈도우에 포커스가 돌아왔을 때 재요청을 하도록 하는 `refetchOnWindowFocus` 등 다양한 옵션이 존재한다. 더 많은 옵션은 [공식 문서 - useQuery reference](https://tanstack.com/query/latest/docs/framework/react/reference/useQuery)에서 확인할 수 있다.
 
 `useQuery`의 반환값에 대해 알아보면, 대표적으로 다음과 같은 상태들을 반환한다.
 
