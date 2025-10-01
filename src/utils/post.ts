@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import matter from "gray-matter";
+import { createSlug } from "./slugText";
 
 interface PostFrontmatter {
   title: string;
@@ -48,6 +49,28 @@ export async function getPost(title: string) {
   const source = fs.readFileSync(postFilePath);
 
   const { content, data: frontmatter } = matter(source);
+  const headings = extractHeadings(content);
 
-  return { content, frontmatter: frontmatter as PostFrontmatter };
+  return { frontmatter: frontmatter as PostFrontmatter, headings, content };
+}
+
+function extractHeadings(markdown: string) {
+  const headingLines = markdown.match(/^(#{1,6})\s+(.*)$/gm);
+
+  if (!headingLines) return [];
+
+  const slug = createSlug();
+
+  const headings = headingLines.map((line) => {
+    const match = line.match(/^(#{1,6})\s+(.*)$/);
+    if (!match) return null;
+
+    const level = match[1].length;
+    const text = match[2];
+    const id = slug(text);
+
+    return { level, text, id };
+  });
+
+  return headings.filter((heading) => heading !== null);
 }
