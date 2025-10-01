@@ -8,6 +8,7 @@ import rehypeImageSize from "@/utils/rehypeImageSize";
 import rehypeImagePath from "@/utils/rehypeImagePath";
 
 import "./postMDXViewer.css";
+import remarkHeadingId from "@/utils/remarkHeadingId";
 
 export interface PostMDXViewerProps {
   mdxString: string;
@@ -19,7 +20,7 @@ function mergeClassNames(...args: string[]) {
 
 const OPTIONS: MDXRemoteProps["options"] = {
   mdxOptions: {
-    remarkPlugins: [[remarkGfm]],
+    remarkPlugins: [[remarkGfm], [remarkHeadingId]],
     rehypePlugins: [
       [rehypeImagePath, { prefix: "/" }],
       [rehypeImageSize, { root: path.join(process.cwd(), "public") }],
