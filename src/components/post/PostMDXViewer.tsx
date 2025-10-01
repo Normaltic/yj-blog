@@ -6,16 +6,13 @@ import remarkGfm from "remark-gfm";
 
 import rehypeImageSize from "@/utils/rehypeImageSize";
 import rehypeImagePath from "@/utils/rehypeImagePath";
+import remarkHeadingId from "@/utils/remarkHeadingId";
+import mergeClassNames from "@/utils/mergeClassNames";
 
 import "./postMDXViewer.css";
-import remarkHeadingId from "@/utils/remarkHeadingId";
 
 export interface PostMDXViewerProps {
   mdxString: string;
-}
-
-function mergeClassNames(...args: string[]) {
-  return args.join(" ");
 }
 
 const OPTIONS: MDXRemoteProps["options"] = {
