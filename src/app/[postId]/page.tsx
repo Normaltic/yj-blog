@@ -2,7 +2,10 @@ import { Metadata } from "next";
 
 import { formatDate } from "@/utils/date";
 import { getPost, getPosts } from "@/utils/post";
+
 import PostViewer from "@/components/post/PostMDXViewer";
+import HighlightToC from "@/components/post/HighlightToC";
+
 import NotFound from "../not-found";
 
 export async function generateStaticParams() {
@@ -52,16 +55,22 @@ async function Page({
   }
 
   const {
-    content,
-    frontmatter: { title, date }
+    frontmatter: { title, date },
+    headings,
+    content
   } = source;
 
   return (
-    <article>
-      <h2 className="text-4xl text-center mt-8 mb-4">{title}</h2>
-      <p className="text-center mb-12">{formatDate(new Date(date))}</p>
-      <PostViewer mdxString={content} />
-    </article>
+    <section className="relative">
+      <article>
+        <h2 className="text-4xl text-center mt-8 mb-4">{title}</h2>
+        <p className="text-center mb-12">{formatDate(new Date(date))}</p>
+        <PostViewer mdxString={content} />
+      </article>
+      <aside className="hidden 2xl:xl:block absolute top-0 bottom-0 left-[calc(100%+4rem)] w-48">
+        <HighlightToC className="sticky top-36" headings={headings} />
+      </aside>
+    </section>
   );
 }
 

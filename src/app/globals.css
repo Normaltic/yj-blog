@@ -12,6 +12,10 @@
   --foreground: #dddddd;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
