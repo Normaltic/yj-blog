@@ -14,22 +14,29 @@ function HighlightToC({ className, headings }: HighlightToCProps) {
   const [activeId, setActiveId] = useState<string>("");
 
   useEffect(() => {
+    const offsetTopList = headings
+      .map(({ id }) => {
+        const el = document.getElementById(id);
+        if (!el) return null;
+        return { id, top: el.offsetTop };
+      })
+      .filter((v) => v !== null);
+    headingOffsetTopList.current = offsetTopList.sort((a, b) => a.top - b.top);
+  }, [headings]);
+
+  useEffect(() => {
     const intersectionObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
-        if (
-          entry.target instanceof HTMLElement &&
-          entry.isIntersecting &&
-          headingOffsetTopList.current.findIndex(
-            (v) => v.id === entry.target.id
-          ) === -1
-        ) {
-          headingOffsetTopList.current.push({
-            id: entry.target.id,
-            top: entry.target.offsetTop
-          });
+        if (entry.target instanceof HTMLElement && entry.isIntersecting) {
+          const { id, offsetTop } = entry.target;
+          const existHeader = headingOffsetTopList.current.find(
+            (v) => v.id === id
+          );
 
+          if (!existHeader) return;
+
+          existHeader.top = offsetTop;
           headingOffsetTopList.current.sort((a, b) => a.top - b.top);
-          intersectionObserver.unobserve(entry.target);
         }
       });
     });
@@ -50,6 +57,8 @@ function HighlightToC({ className, headings }: HighlightToCProps) {
       );
       setActiveId(activeHeading ? activeHeading.id : "");
     };
+
+    handleScroll();
 
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
