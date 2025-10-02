@@ -67,7 +67,7 @@ async function Page({
         <p className="text-center mb-12">{formatDate(new Date(date))}</p>
         <PostViewer mdxString={content} />
       </article>
-      <aside className="hidden 2xl:xl:block absolute top-0 bottom-0 left-[calc(100%+4rem)] w-48">
+      <aside className="hidden xl:block absolute top-0 bottom-0 left-[calc(100%+1rem)] 2xl:left-[calc(100%+4rem)] w-48">
         <HighlightToC className="sticky top-36" headings={headings} />
       </aside>
     </section>
