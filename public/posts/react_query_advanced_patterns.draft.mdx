@@ -14,174 +14,529 @@ react-query는 서버 상태를 관리하는 강력한 도구로, 데이터 페�
 
 ### Parallel Query
 
-`useQuery`를 사용하면 데이터를 페칭하여 불러올 수 있다. 그리고 한 페이지에서 여러 개의 데이터를 불러와야 할 수도 있다.
+react-query의 `useQuery`는 데이터를 불러오는 훅이다. 특정 데이터를 불러오고 캐싱하고 최적화하며, 쿼리의 상태(로딩, 에러 등)를 제공해주어 UI를 쉽게 제어할 수 있게 해준다.
 
-이 경우 `useQuery`를 여러 번 선언해 각각의 요청을 관리할 수 있다.
+일반적인 상황에서는 한 컴포넌트에서 하나의 데이터를 불러오는 것으로 충분하지만, 여러 개의 데이터를 동시에 불러와야 하는 경우도 있다. 예를 들어, 한 컴포넌트에서 사용자 정보와 해당 사용자의 게시글 목록을 함께 불러와야 하는 경우이다.
 
-(예시 코드 - 복수개의 useQuery)
+이 경우 가장 단순한 방법은 `useQuery`를 여러 번 호출하여 각각의 쿼리를 실행하고 관리하는 것이다.
 
-하지만 이 방식은 각 쿼리를 개별적으로 다뤄야 한다. 그래서 필요한 경우 각 상태를 일일이 확인하고 처리해야 한다.
+```ts
+const {
+  data: user,
+  isLoading: isUserLoading,
+  isError: isUserError
+} = useQuery(["user", userId], fetchUser);
 
-(예시 코드 - isLoading or isError 처리)
+const {
+  data: posts,
+  isLoading: isPostsLoading,
+  isError: isPostsError
+} = useQuery(["posts", userId], fetchPosts);
+```
 
-위 코드는 두 개의 쿼리를 관리하는 예시이다. 각 로딩과 에러의 상태를 개별적으로 확인하고 처리해야 한다.
+하지만 이 방식은 각 쿼리를 개별적으로 다루며, 그 상태도 각각 관리된다. 그래서 필요한 경우 상태를 하나씩 확인하고 처리해야 한다.
 
-몇 개 까지는 괜찮겠지만, 쿼리의 개수가 많아지면 많아질 수록 문제가 생긴다. 코드가 길어지고, 상태 관리가 복잡해지며, 유지보수가 어려워진다.
+```tsx
+if (isUserLoading || isPostsLoading) {
+  return <LoadingSpinner />;
+}
 
-각 퀄의 로딩과 에러 상태를 일관되게 관리하기 어려워진다. 모든 상태를 일일이 조합해야 하므로 코드가 복잡해지고, 화면 단위의 상태 판단도 까다로워진다.
+if (isUserError || isPostsError) {
+  return <ErrorMessage />;
+}
 
-이를 해결하기 위해 복수 개의 쿼리를 처리하기 위해 `useQueries` 훅을 사용할 수 있다.
+// or
+
+return (
+  <div>
+    {isUserLoading ? (
+      <LoadingSpinner />
+    ) : isUserError ? (
+      <ErrorMessage />
+    ) : (
+      <UserProfile user={user} />
+    )}
+
+    {isPostsLoading ? (
+      <LoadingSpinner />
+    ) : isPostsError ? (
+      <ErrorMessage />
+    ) : (
+      <PostsList posts={posts} />
+    )}
+  </div>
+);
+```
+
+위 예시는 각 쿼리의 로딩과 에러 상태를 개별적으로 확인하고 처리하는 모습이다. 물론, 컴포넌트를 분리하여 각 쿼리를 독립적으로 관리할 수도 있지만, 그럴 수 없는 경우에는 각 쿼리의 상태를 일일이 확인하고 처리해야 한다.
+
+그래서 쿼리의 개수가 늘어날수록 상태 분기문이 많아져 각 쿼리의 로딩과 에러 상태를 일관되게 관리하기 어려워진다. 그리고 여러 쿼리의 로딩이 동시에 일어나는 상황에서는 각 상태를 조합하여 처리해야 하는데, 모든 상태를 일일이 조합해야 하므로 코드가 복잡해지고, 화면 단위의 상태 판단도 까다로워진다. 그러면서 유지보수가 어려워지기 시작한다.
+
+그래서 여러 개의 쿼리를 관리하기 위해, react-query는 `useQueries` 라는 훅을 제공한다.
 
 #### useQueries
 
-useQueries에 대한 설명
+`useQueries`는 이름 그대로, 여러 개의 쿼리를 하나로 묶어 관리할 수 있게 해주는 훅이다. 각 쿼리의 설정을 전달하면 react-query가 이를 병렬로 실행하며, `useQuery`를 여러 번 호출하는 대신 쿼리들을 한 번에 선언하고 관리할 수 있다.
 
-`useQueries`는 여러 개의 쿼리를 한 번에 선언하고 관리할 수 있게 해주는 훅이다.
+```ts
+const results = useQueries({
+  queries: [
+    { queryKey: ["user", userId], queryFn: fetchUser },
+    { queryKey: ["posts", userId], queryFn: fetchPosts }
+  ]
+});
+```
 
-(예시 코드 - useQueries)
+`useQueries`는 객체를 인자로 받으며, 그 객체의 `queries` 속성에 쿼리 설정 객체들의 배열을 전달한다. 쿼리 설정 객체는 `useQuery`의 옵션 객체와 동일한 형태를 가진다. 즉, `queryKey`, `queryFn`, `enabled`, `staleTime` 등 `useQuery`에서 사용하는 모든 옵션을 사용할 수 있다.
 
-여러 쿼리를 하나의 훅에서 관리할 수 있음.
+반환되는 값은 각 쿼리의 상태를 담은 객체들의 배열이다. 그래서 배열의 인덱스를 통해 각 쿼리의 상태에 접근할 수 있는데, 각 요소 역시 `useQuery`가 반환하는 객체와 동일한 형태이다.
 
-배열의 아이템은 각 쿼리의 설정 객체, 즉 `useQuery`의 옵션 객체와 동일한 형태
+```ts
+const [userResult, postsResult] = results;
 
-접근 시 각 쿼리의 상태를 배열로 접근 가능
+if (userResult.isLoading || postsResult.isLoading) {
+  return <LoadingSpinner />;
+}
 
-`useQueries`는 그래서 단순하게, 마치 `Promise.all`를 사용하는 것 처럼, 여러 개의 `useQuery` 호출을 병렬로 처리할 수 있게 해주는 것 처럼 보인다.
+if (userResult.isError || postsResult.isError) {
+  return <ErrorMessage />;
+}
+```
 
-그런데, 단순히 병렬 요청을 처리하는 것이고 배열로 상태를 반환하기 때문에, 각 쿼리의 상태를 개별적으로 확인하고 처리해야 한다는 점은 동일하다. 다른 글에서는 실제로 단순히 복수개의 `useQuery`와 동일하다는 이야기도 보았다.
+그래서 단순하게, `useQueries`는 `Promise.all`를 사용하는 것 처럼, 여러 개의 `useQuery` 호출을 병렬로 처리할 수 있게 해주는 훅이다.
 
-그러나 `combine` 옵션을 활용한다면, `useQueries` 사용 이유를 더욱 명확하게 할 수 있다.
+그런데, 단순히 병렬 요청을 처리하는 것이고 배열로 상태를 반환하기 때문에, 각 쿼리의 상태를 개별적으로 확인하고 처리해야 한다는 점은 변함이 없다. 실제로 다른 글에서는 단순히 복수개의 `useQuery`와 동일하다는 이야기도 보았다.
+
+그렇다면 왜 `useQueries`를 사용할까? `useQueries`의 `combine` 옵션을 활용한다면, 훅의 사용 이유를 더욱 명확하게 만들 수 있다.
 
 > `combine` 옵션은 react-query v5에 추가된 기능이다.
 
-(예시 코드 - combine 옵션)
+`combine`은 `useQueries`의 실행 결과를 하나의 객체로 결합할 수 있는 옵션이다. `combine` 옵션에 함수를 전달하면, `useQueries`가 반환하는 각 쿼리의 결과를 인자로 받아 새로운 값을 반환한다.
 
-이를 활용하면 전달한 쿼리들의 결과를 조합하여 새로운 객체를 반환할 수 있다.
+```ts
+const combinedResult = useQueries({
+  queries: [
+    { queryKey: ["user", userId], queryFn: fetchUser },
+    { queryKey: ["posts", userId], queryFn: fetchPosts }
+  ],
+  combine: ([userResult, postsResult]) => ({
+    data: {
+      user: userResult.data,
+      posts: postsResult.data
+    },
+    isLoading: userResult.isLoading || postsResult.isLoading,
+    isError: userResult.isError || postsResult.isError
+  })
+});
+```
 
-(예시 코드 - combine 결과 활용)
+위 예시는 `combine` 옵션을 사용하여, 각 쿼리의 결과를 묶어 하나의 `data`, `isLoading`, `isError` 속성을 가진 객체로 결합하는 모습이다. `combine` 함수에서 반환한 객체가 `useQueries`의 반환값이 된다.
 
-각 쿼리를 묶어 **하나의 상태로 관리**할 수 있다.
+즉, 각 쿼리를 하나의 상태로 관리할 수 있게 되며, `combinedResult.isLoading` 과 같은 형태로 사용할 수 있다.
 
-그래서 `combine` 옵션을 사용한다면, 단순히 여러 쿼리를 병렬로 실행하는 것에 그치지 않고, 여러 쿼리의 결과를 하나로 묶어 관리할 수 있다.
+```tsx
+const { data, isLoading, isError } = combinedResult;
 
-`combine` 옵션은 다음과 같은 경우에 다시 실행된다.
+if (isLoading) {
+  return <LoadingSpinner />;
+}
+
+if (isError) {
+  return <ErrorMessage />;
+}
+
+return (
+  <div>
+    <UserProfile user={data.user} />
+    <PostsList posts={data.posts} />
+  </div>
+);
+```
+
+그래서 `combine` 옵션을 사용한다면, 단순히 여러 쿼리를 병렬로 실행하는 것에 그치지 않고, 여러 쿼리의 결과를 하나로 묶어 관리할 수 있게 된다. 이를 통해 여러 쿼리의 상태를 일관되게 관리할 수 있으며, 화면 단위의 상태 판단도 훨씬 간단해진다.
+
+`combine` 옵션으로 전달한 함수는 내부적으로 다음과 같은 경우에 다시 실행된다.
 
 - 쿼리의 데이터가 변경될 때
 - `combine` 함수가 변경될 때
 
-즉, 위 코드처럼 인라인으로 작성된 `combine` 함수는 매 렌더링마다 새로 생성되기 때문에, 쿼리의 데이터가 변경되지 않더라도 매 렌더링마다 `combine` 함수가 변경되어 다시 실행된다.
+즉, 위 코드처럼 인라인으로 작성된 `combine` 함수는 매 렌더링마다 새로 생성된다. 그래서 쿼리의 데이터가 변경되지 않더라도 매 렌더링마다 `combine` 함수가 변경되므로, `combine` 함수가 매번 다시 실행된다.
 
-따라, `combine` 함수를 컴포넌트 바깥으로 빼거나, `useCallback`으로 메모이제이션하는 것이 좋다.
+이를 방지하기 위해서는 `combine` 함수를 컴포넌트 외부로 분리하거나, `useCallback`으로 메모이제이션해야 한다.
 
-(예시 코드 - useCallback 활용)
+```ts
+const combine = useCallback((results) => { ... }, []);
+
+const combinedResult = useQueries({
+  queries: [ ... ],
+  combine
+});
+```
+
+정리하자면, `useQueries` 훅은 여러 쿼리를 병렬로 실행할 수 있고, `combine` 옵션은 그 결과를 하나의 상태로 통합해 관리할 수 있게 한다. 이를 활용한다면, 여러 데이터를 동시에 요청하면서도 코드의 가독성과 일관성을 높일 수 있다.
 
 #### Dynamic multiple queries
 
-만약, 쿼리를 동적으로 생성해야 하는 경우가 필요할 수 있다.
+상황에 따라 불러와야 하는 데이터의 개수가 일정하지 않은 경우가 있다. 예를 들어, 여러 개의 ID를 받아 각각의 데이터를 불러와야 하는 경우처럼, 요청의 개수가 런타임에 결정되는 상황이 존재한다.
 
-예를 들어, 여러 개의 ID를 받아 각각의 데이터를 불러와야 하는 경우이다.
+이 경우, 복수개의 ID를 받아서 데이터를 반환하는 API가 있다면 단일 쿼리로 해결할 수 있다. 그러나, 그렇지 않은 경우 각 ID에 해당하는 데이터를 불러오는 쿼리를 생성해야 한다.
 
-이 경우, 복수개의 ID를 받아서 데이터를 반환하는 API가 있다면 단일 쿼리로 해결할 수 있다. 그러나, 그렇지 않은 경우, 각 ID마다 개별 쿼리를 생성해야 한다.
+하지만 `useQuery`는 훅이고, 훅은 조건문이나 반복문 안에서 호출할 수 없는 조건이 있다. 따라서, `useQuery`를 동적으로 생성할 수 없다.
 
-하지만, `useQuery`는 훅이기 때문에 조건문이나 반복문 안에서 호출할 수 없다. 따라서, 동적으로 쿼리를 생성하는 것이 어렵다.
+> React rules of hooks: https://react.dev/reference/rules/rules-of-hooks
 
 이 때, `useQueries`의 진가가 발휘된다.
 
-`useQueries`는 배열을 인자로 받기 때문에, **동적으로 쿼리를 생성**할 수 있다. 예를 들어, ID 배열을 받아서 각 ID마다 쿼리를 생성할 수 있다.
+`useQueries`는 배열 형태로 쿼리 설정을 전달 받는데, 이 전달하는 배열을 동적으로 생성하여 전달할 수 있다. 즉, 쿼리의 개수를 런타임에 결정하고, 그에 따라 배열을 구성해 **동적으로 쿼리를 생성**할 수 있다.
 
-(예시 코드 - 동적 useQueries)
+```ts
+const result = useQueries({
+  queries: ids.map((id) => ({
+    queryKey: ["item", id],
+    queryFn: () => fetchItemById(id)
+  }))
+});
+```
 
-위 코드에 대한 설명
+위 예시는 `ids` 배열을 기반으로 각 아이템 데이터를 요청하는 코드이다. `ids` 배열을 받아서, 각 ID마다 쿼리 설정 객체를 생성하여 `useQueries`에 전달한다. 그래서 `ids` 배열의 길이에 따라 쿼리의 개수가 결정되며, 각 쿼리는 해당 ID에 해당하는 데이터를 불러오게 된다.
 
-쿼리의 개수나 key를 런타임에 결정할 수 있음.
+물론 `combine` 옵션을 함께 사용할 수도 있다.
 
-동적 쿼리 생성이 필요할 때 매우 유용.
+```ts
+const combine = useCallback(
+  (results: UseQueryResult<Awaited<ReturnType<typeof fetchItemById>>>[]) => ({
+    data: results.map((result) => result.data),
+    isLoading: results.some((result) => result.isLoading),
+    isError: results.some((result) => result.isError)
+  }),
+  []
+);
 
-단, key가 중복되지 않도록 주의해야 함. key가 중복될 경우 옵션(`placeHolderData` 등)이 의도치 않게 공유될 수 있음.
+const combinedResult = useQueries({
+  queries: ids.map((id) => ({
+    queryKey: ["item", id],
+    queryFn: () => fetchItemById(id)
+  })),
+  combine
+});
+```
 
-`useQueries`는 여러 쿼리를 병렬 처리하는 데 유용하게 사용할 수 있다.
+이처럼 `useQueries`를 활용한다면 훅 규칙을 위반하지 않고 동적으로 쿼리를 생성할 수 있게 되어, 쿼리의 개수가 런타임에 달라지는 상황에서도 유연하게 대응할 수 있다.
 
-`combine` 통해 여러 쿼리를 하나의 상태로 묶어 관리할 수 있다.
+단, 각 쿼리의 `queryKey`가 중복되지 않도록 주의해야 한다. 동일한 키를 사용하면 캐시가 충돌하거나, 의도치 않게 상태나 옵션(`placeholderData` 등)이 공유될 수 있다.
 
-또한, 동적으로 쿼리를 생성해야 하는 경우에도 유용하게 사용할 수 있다.
+> Having the same query key more than once in the array of query objects may cause some data to be shared between queries, e.g. when using placeholderData and select. To avoid this, consider de-duplicating the queries and map the results back to the desired structure. - 공식 문서
 
-이를 활용한다면 여러 쿼리를 하나로 묶거나, 동적으로 쿼리를 생성하는 등의 다양한 시나리오에서 효과적으로 서버 상태를 관리할 수 있다.
+react-query의 `useQueries`는 여러 쿼리를 병렬 처리하는 데 유용하게 사용할 수 있고, `combine` 옵션과 함께 사용한다면 여러 쿼리를 하나의 상태로 묶어 관리할 수 있다. 또한, 동적 쿼리 생성이 필요할 때 매우 유용하다.
 
-결국 `useQueries`는 여러 쿼리를 하나의 패턴으로 묶거나, 동적으로 생성해야 하는 요청을 유연하게 제어할 수 있는 훅이다. 복잡한 데이터 요청 흐름 속에서도 일관된 형태로 서버 상태를 관리할 수 있게 해준다.
+이를 활용한다면 여러 쿼리를 하나의 패턴으로 묶거나, 동적으로 쿼리를 생성해야 하는 상황을 유연하게 제어할 수 있다. 다양한 시나리오에서 효과적으로 서버 상태를 관리할 수 있게 된다.
 
 ### Cancellation
 
-사용자가 화면을 이동할 경우 이전 요청은 더 이상 유효하지 않게 된다. 이 경우, 이전 요청을 취소하여 불필요한 네트워크 요청을 방지해야 한다.
+데이터를 요청하는 것만큼, 더 이상 필요하지 않은 요청을 취소하는 것도 중요하다. 사용자가 화면을 이동할 경우 이전 요청은 더 이상 유효하지 않게 된다. 이 경우 필요하지 않은 데이터를 받아오는 데 리소스를 낭비하게 되므로, 이전 요청을 취소하여 불필요한 네트워크 요청을 방지해야 한다.
 
-또한, 특정 요청을 직접 취소하고 싶은 경우도 있을 수 있다.
+또한 데이터 변경을 요청에서도, 응답을 기다리는 도중에 요청을 취소해야 하는 상황이 있을 수 있다. 예를 들어, 사용자가 작업을 직접 취소하는 기능을 제공해야 하는 경우이다.
 
-그래서 쿼리와 뮤테이션을 취소해야 하는 상황에서는 어떻게 해야 할까?
+그래서 리소스 최적화나 사용자 경험 등을 위해, 특정 상황에서 쿼리와 뮤테이션 요청을 취소할 수 있는 방법이 필요할 수 있다.
 
 #### Query
 
-기본적으로 `useQuery`는 컴포넌트가 언마운트될 때 자동으로 쿼리를 취소한다.
+기본적으로 `useQuery` 훅은 컴포넌트가 언마운트될 때 자동으로 쿼리를 취소한다. 이는 더 이상 해당 데이터를 구독하지 않을 때, 불필요한 업데이트를 방지하기 위함이다.
 
-이는 쿼리가 더 이상 필요하지 않을 때 불필요한 네트워크 요청을 방지하기 위함이다.
+그러나 수동으로 쿼리를 취소하고 싶은 경우도 있을 수 있다. 예를 들어, 요청 완료 시간이 오래 걸리는 쿼리가 있을 때, 사용자가 특정 작업을 수행하여 해당 쿼리를 더 이상 필요로 하지 않게 되는 상황이다.
 
-그러나 수동으로 쿼리를 취소하고 싶은 경우도 있을 수 있다.
+이럴 때는 `QueryClient`의 `cancelQueries` 메서드를 사용하여 특정 쿼리를 직접 취소할 수 있다.
 
-`queryClient.cancelQueries` 메서드를 사용하여 특정 쿼리를 취소할 수 있다.
+```ts
+await queryClient.cancelQueries({ queryKey: ["search"] });
+```
 
-(예시 코드 - cancelQueries)
+`cancelQueries`는 "아직 끝나지 않은 쿼리"를 명시적으로 중단시키는 메서드이다. 그래서 특정 쿼리가 진행 중일 때, 해당 쿼리를 취소하고 싶다면 이를 호출하여 처리할 수 있다. 다만, 이미 실행이 완료된 쿼리에는 영향을 미치지 않는다.
 
-이 메서드는 쿼리 키를 인자로 받아 해당 쿼리를 취소한다.
+`queryKey` 옵션에는 취소하고자 하는 쿼리의 키를 전달해야 하는데, 이는 정확히 특정 쿼리를 지정하는게 좋다. 그렇지 않으면, 의도치 않게 다른 쿼리까지 취소될 수 있다.
 
-단, 이 메서드는 쿼리의 상태를 `canceled`로 변경하지만, 실제 네트워크 요청을 취소하지는 않는다.
+`cancelQueries` 메서드는 전달하는 옵션에 따라 후속 동작이 달라진다.
 
-따라서 네트워크 요청도 취소하기 위한 추가적인 작업이 필요하다.
+- `silent`: 기본값은 `false`이며, `true`로 설정하면 쿼리가 취소될 때 에러를 발생시키지 않는다. 그래서 `onError` 콜백 등 관련한 후속 작업이 실행되지 않으며, 대신 쿼리의 재시도 `Promise`를 반환한다.
+- `revert`: 기본값은 `true`이며, `true`로 설정하면 쿼리가 취소될 때 이전 상태를 복원한다. 그래서 쿼리가 취소되기 전의 상태로 돌아간다. 만약 이전 상태가 없다면 에러를 발생시킬 수 있다.
 
-이를 위해 `queryFn`에서 전달되는 `AbortController`를 활용할 수 있다.
+이처럼 `cancelQueries`를 호출하여 쿼리 진행을 명시적으로 중단할 수 있다.
 
-(예시 코드 - queryFn 명세)
+단, react-query의 쿼리 취소는 **실제 네트워크 요청을 취소하지는 않는다**. 따라서, 네트워크 요청도 취소하기 위해서는 추가적인 처리가 필요하다.
 
-`fetch` API는 `AbortController`를 지원함. 그래서 `signal`을 `fetch`에 전달하여 요청을 취소할 수 있다.
+react-query의 쿼리 함수 `queryFn`는 `AbortController`를 지원한다. `queryFn`에 파라미터로 전달되는 인스턴스인 `signal`는 쿼리가 취소될 때 `aborted` 상태로 변경된다. 이를 활용하면 네트워크 요청도 함께 취소할 수 있다.
 
-(예시 코드 - fetch에 signal 전달)
+`fetch` API는 `AbortController`를 지원하기 때문에, `signal`을 `fetch`에 전달할 수 있다.
 
-`axios`는 기본적으로 `AbortController`를 지원하지 않지만, `cancelToken`을 활용하여 요청을 취소할 수 있다.
+```ts
+useQuery({
+  queryKey: ["todos"],
+  queryFn: async ({ signal }) => {
+    const response = await fetch(`/api/todos?page=${page}`, { signal });
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    return response.json();
+  }
+});
 
-(예시 코드 - axios cancelToken 활용)
+useEffect(() => {
+  setTimeout(() => {
+    queryClient.cancelQueries({ queryKey: ["todos"] });
+  }, 1000);
+}, []);
+```
+
+쿼리가 취소될 때, `signal`이 `aborted` 상태로 변경되어 `fetch` 요청이 취소된다.
+
+![사진 1) fetch 요청이 취소된 모습](../images/react_query_advanced_patterns/fetch_cancellation.png)
+
+`axios`의 경우 0.22.0 버전부터 `AbortController`를 지원한다. 그래서 `signal`을 `axios` 요청에 전달하여 요청을 취소할 수 있다.
+
+```ts
+axios.get("/api/todos", { signal });
+```
+
+이전 버전에서는 `cancelToken`을 활용해 요청을 취소해야 한다.
+
+```ts
+useQuery({
+  queryKey: ["todos"],
+  queryFn: async ({ signal }) => {
+    const source = axios.CancelToken.source();
+
+    signal?.addEventListener("abort", () => {
+      source.cancel("Query was cancelled");
+    });
+
+    const response = await axios.get("/api/todos", {
+      params: { page },
+      cancelToken: source.token
+    });
+
+    return response.data;
+  }
+});
+```
+
+쿼리가 취소되며 `signal`의 상태가 변경될 때 `abort` 이벤트가 발생하고, 이를 통해 `axios` 요청을 취소시킬 수 있다.
+
+react-query는 `inactive`(구독하는 컴포넌트가 없는)상태가 되거나, `cancelQueries` 메서드를 직접 호출할 때 쿼리를 취소하여 최적화한다. 그리고 네트워크 요청을 취소할 수 있는 기능도 함께 제공하여, 불필요한 리소스 낭비를 줄일 수 있게 해준다. 이를 잘 활용한다면, 리소스를 절약하여 서비스의 성능을 향상시킬 수 있다.
+
+다만, 다른 섹션에서 다시 언급하겠지만, 쿼리 캔슬은 `Suspense`와 함께 사용할 때에는 정상 작동하지 않으므로 유의해야 한다.
+
+> Cancellation does not work when working with Suspense hooks: useSuspenseQuery, useSuspenseQueries and useSuspenseInfiniteQuery. - 공식 문서
 
 #### Mutation
 
-`useMutation`은 데이터를 변경하는 요청을 처리하며, 함수를 호출하는 시점에 요청이 시작된다.
+`useMutation`은 주로 데이터를 변경하는 요청을 처리할 때 사용한다. 이 훅은 전달받는 `mutate`, `mutateAsync` 함수를 호출하는 시점에 요청이 시작된다.
 
-데이터를 변경하는 요청을 취소하고 싶은 경우가 있을 수 있다.
+특정 상황에서는 이 요청을 취소해야 할 수도 있다. 예를 들어, 사용자가 작업을 취소하는 기능을 제공하는 경우이다.
 
-그러나, `useMutation`에서는 요청을 취소하는 기능이 기본적으로 제공되지 않는다.
+그러나 `useMutation`는 `useQuery`와 달리 자동으로 요청을 취소하지 않으며, 요청을 취소하는 기능이 제공되지 않는다.
 
 따라서, `useMutation`에서 요청을 취소하려면 `AbortController`를 활용하여 직접 구현해야 한다.
 
-(예시 코드 - useMutation에서 AbortController 활용)
+```ts
+const controllerRef = useRef<AbortController | null>(null);
 
-위 코드에서 `AbortController`를 생성하고, `mutationFn`에 전달하여 요청을 취소할 수 있다.
+const mutation = useMutation({
+  mutationFn: async (id: string) => {
+    controllerRef.current = new AbortController();
+    const response = await fetch(`/api/todos/${id}`, {
+      method: "DELETE",
+      signal: controllerRef.current.signal
+    });
+    if (!response.ok) {
+      throw new Error("Network response was not ok");
+    }
+    return response.json();
+  },
+  onSettled: () => {
+    controllerRef.current = null;
+  }
+});
+
+const handleCancel = () => {
+  controllerRef.current?.abort();
+};
+```
+
+위 예시는 `useMutation`에서 `AbortController`를 활용하여 요청을 취소하는 코드이다. `mutationFn`에서 `AbortController` 인스턴스를 생성하고, 이를 `fetch` 요청에 전달한다. 그리고 요청이 완료되거나 실패했을 때, `onSettled` 콜백에서 컨트롤러를 초기화한다.
+
+그리고 `handleCancel` 함수에서 컨트롤러의 `abort` 메서드를 호출한다.
+
+![사진 2) 삭제 요청이 취소된 모습](../images/react_query_advanced_patterns/cancel_delete_todo.gif)
+
+이렇게 하면 `AbortController`가 `signal`을 통해 요청을 취소하며 `fetch` 작업이 중단된다. 이 때, `fetch`는 `AbortError`를 발생시키고, 이 에러는 `onError` 콜백으로 전달된다. 이를 이용해 UI 상태를 처리할 수 있다.
+
+`axios`는 버전이 낮은 경우 `AbortController`를 지원하지 않으므로, 역시 `cancelToken`을 활용하여 요청을 취소해야 한다.
+
+```ts
+const sourceRef = useRef<CancelTokenSource | null>(null);
+
+const mutation = useMutation({
+  mutationFn: async (id: string) => {
+    sourceRef.current = axios.CancelToken.source();
+
+    const response = await axios.delete(`/api/todos/${id}`, {
+      cancelToken: sourceRef.current.token
+    });
+
+    return response.data;
+  },
+  onSettled: () => {
+    sourceRef.current = null;
+  }
+});
+
+const handleCancel = () => {
+  sourceRef.current?.cancel("Mutation was cancelled");
+};
+```
+
+뮤테이션 취소가 필요할 때마다 매번 동일한 작업을 반복하는 것은 번거로울 수 있다. 그래서 이를 커스텀 훅으로 추상화 한다면 더 편리하게 사용할 수 있겠다.
+
+```ts
+type Options<TData, TError, TVariables, TContext> = Omit<
+  UseMutationOptions<TData, TError, TVariables, TContext>,
+  "mutationFn"
+> & {
+  mutationFn: (variables: TVariables, signal: AbortSignal) => Promise<TData>;
+};
+
+function useCancellableMutation<TData, TError, TVariables, TContext>(
+  options: Options<TData, TError, TVariables, TContext>
+) {
+  const controllerRef = useRef<AbortController | null>(null);
+
+  const mutateResult = useMutation({
+    ...options,
+    mutationFn: (variables: TVariables) => {
+      controllerRef.current = new AbortController();
+      const { signal } = controllerRef.current;
+      return options.mutationFn(variables, signal);
+    },
+    onSettled: (...args) => {
+      controllerRef.current = null;
+      options.onSettled?.(...args);
+    }
+  });
+
+  const cancel = useCallback(() => {
+    controllerRef.current?.abort();
+  }, []);
+
+  return { ...mutateResult, cancel };
+}
+```
+
+이 훅을 사용한다면, `mutate` 함수와 함께 `cancel` 함수도 반환받아 사용할 수 있다.
+
+```ts
+const { mutate, cancel } = useCancellableMutation({ ... });
+```
+
+지금까지 쿼리와 뮤테이션을 취소하는 방법에 대해 알아보았다.
+
+`useQuery`는 react-query가 자동으로 쿼리를 취소해주며, `cancelQueries` 메서드를 사용하여 수동으로 쿼리를 취소할 수도 있다. 그리고 전달받는 `AbortController`를 통해 쿼리가 취소될 때 네트워크 요청도 함께 취소할 수 있다.
+
+`useMutation`은 취소 기능을 제공해주지 않는다. 따라서, 필요할 경우 `AbortController`를 활용하여 요청 취소 기능을 직접 구현해야 한다.
+
+쿼리와 뮤테이션 요청을 취소하는 기능을 잘 활용한다면, 불필요한 네트워크 요청을 방지하여 리소스를 최적화하고, 취소 기능을 통해 사용자의 의도대로 작동하는 더 친절한 인터페이스를 제공할 수 있다.
 
 ### Prefetch Query
 
-프리패치란?
+데이터를 빠르게 보여주는 것은 사용자 경험에서 매우 중요하다. 사용자는 클릭과 동시에 화면이 바뀌길 기대한다. 그러나 필요한 데이터를 서버에 요청하고 응답을 받아 화면을 출력하는 과정에서, 사용자는 아무런 피드백을 받지 못하는 경우 지연을 느낄 수 있다.
 
-일반적인 프리패치 예시. link hover, 예상되는 페이지 이동 등.
+그래서 사용자에게 빠른 반응을 보여주기 위해 다양한 방법을 사용하는데, 데이터를 불러오는 동안 로딩 스피너나 스켈레톤 UI 등을 출력하여 체감 속도를 완화하는 경우도 있다. 하지만 너무 로딩 시간이 짧다면 화면이 깜빡이는 현상이 발생할 수 있어 오히려 혼란을 줄 수 있다. 이를 위해, 특정 시간 이하의 짧은 로딩 시간에는 로딩 UI를 생략하는 전략을 구성하기도 한다.
 
-react-query에서도 프리패치를 지원한다.
+다른 방법 중 하나는 **프리패치**(Prefetch)이다. 프리패치는 사용자의 행동을 예측하여, 실제로 데이터가 필요하기 전에 미리 데이터를 불러오는 기법이다. 사용자가 링크에 마우스를 올렸을 때 해당 페이지의 리소스를 미리 불러오거나, 사용자가 특정 데이터를 필요할 것으로 예상되는 경우 미리 데이터를 요청하는 것이다.
 
-`queryClient.prefetchQuery` 메서드를 사용하여 쿼리를 미리 불러올 수 있다.
+이를 통해 사용자가 실제로 데이터를 필요로할 때, 이미 불러온 데이터를 즉시 보여줄 수 있어, 더 빠르고 부드러운 사용자 경험을 제공할 수 있다.
 
-(예시 코드 - prefetchQuery)
+브라우저에서는 특정 페이지의 리소스를 미리 불러오는 프리패치 기능을 제공한다.
 
-이 메서드는 쿼리 키와 쿼리 함수를 인자로 받아 해당 쿼리를 미리 불러온다.
+```html
+<link rel="prefetch" href="/next-page" />
+<link rel="prefetch" href="/app/style.css" />
+```
 
-프리패치된 쿼리는 캐시에 저장되며, 이후 동일한 쿼리 키로 요청할 때 캐시된 데이터를 즉시 반환한다.
+`link` 태그를 사용하여 `rel="prefetch"` 속성을 적용하고, 다음 페이지 혹은 다음 페이지의 리소스를 지정하면, 브라우저가 백그라운드에서 해당 리소스를 미리 불러온다. 그래서 사용자가 실제로 해당 페이지로 이동할 때, 이미 불러온 리소스를 즉시 사용하게 되어 더 빠른 반응을 제공할 수 있다.
 
-프리패치는 사용자가 특정 작업을 수행하기 전에 데이터를 미리 불러와, 사용자 경험을 향상시키는 데 유용하다.
+react-query에서도 데이터에 대한 프리패치를 지원한다. 사용자가 필요할 것으로 예상되는 데이터를 미리 불러와 캐시에 저장해두고, 실제로 해당 데이터가 필요할 때 즉시 사용할 수 있도록 동작한다.
 
-예를 들어, 사용자가 특정 링크를 클릭할 것으로 예상되는 경우, 해당 링크에 마우스를 올렸을 때 프리패치를 수행하여, 사용자가 클릭했을 때 즉시 데이터를 표시할 수 있다.
+react-query의 프리패치는 쿼리 단위로 동작하며, `QueryClient`의 `prefetchQuery` 메서드를 사용하여 특정 쿼리를 미리 불러올 수 있다.
 
-(예시 코드 - link hover 시 prefetch)
+```ts
+import { QueryClient } from "react-query";
+
+const queryClient = new QueryClient();
+
+queryClient.prefetchQuery({
+  queryKey: ["todo", 1],
+  queryFn: () => getTodo(1)
+});
+```
+
+해당 메서드는 `queryKey`와 `queryFn` 옵션을 인자로 받으며, 지정한 쿼리를 미리 불러온다. 그리고 미리 요청된 쿼리는 그 결과가 캐시에 저장되며, 이후 동일한 쿼리 키로 요청할 때 캐시된 데이터를 즉시 반환한다.
+
+이를 활용하여, 사용자가 특정 작업을 수행할 때 필요한 데이터를 미리 불러올 수 있다. 가장 일반적인 패턴은 특정 요소에 마우스를 올렸을 때(hover) 데이터를 미리 불러오는 것이다.
+
+```tsx
+const handleMouseEnter = (id: number) => {
+  queryClient.prefetchQuery({
+    queryKey: ["todo", id],
+    queryFn: () => getTodo(id)
+  });
+};
+
+return (
+  <Link to={`/todo/${id}`} onMouseEnter={() => handleMouseEnter(id)}>
+    ...
+  </Link>
+);
+```
+
+위 예시는 링크에 마우스를 올렸을 때, 해당 투두 아이템의 데이터를 미리 불러오는 코드이다. `/todo/${id}` 페이지에는 `["todo", id]` 쿼리를 사용하는 `useQuery`가 있다. 이 경우, 사용자가 링크에 마우스를 올리면 쿼리를 미리 실행하며, 클릭하여 해당 페이지로 이동하면 데이터를 요청하지 않고 캐시된 데이터를 즉시 사용하게 된다.
+
+![사진 3) Prefetch Todo](../images/react_query_advanced_patterns/prefetch_todo_on_hover.gif)
+
+그래서 페이지 이동 시 데이터 요청이 발생하지 않고, 이미 불러온 데이터를 즉시 사용하여 더 빠른 반응을 제공할 수 있다.
+
+`prefetchQuery` 메서드의 옵션은 `useQuery`의 옵션과 거의 동일하다. 그래서 `staleTime`, `gcTime` 을 설정하여 캐시의 유효 기간을 조절할 수도 있다.
+
+```ts
+queryClient.prefetchQuery({
+  queryKey: ["todo", 1],
+  queryFn: () => getTodo(1),
+  staleTime: 1000 * 60 * 5 // 5분
+});
+```
+
+위 예시는 프리패치된 쿼리가 5분 동안 신선한 상태로 유지되도록 한다. 그래서 5분 이내에 동일한 쿼리 키로 요청할 때, 캐시된 데이터를 즉시 반환하게 된다.
+
+단, 해당 쿼리를 요청하는 `useQuery`의 `staleTime`이 더 짧다면, 그 시간이 우선 적용된다. 만약, `useQuery`에 `staleTime`이 설정되어 있지 않다면(기본값은 `0`이다.), `useQuery`가 호출되는 시점에 이미 오래된 데이터로 간주되어 재요청이 발생할 수 있다.
+
+![사진 4) Duplicate request on enter page](../images/react_query_advanced_patterns/duplicate_request_on_enter.gif)
+
+호버 시 데이터를 미리 불러왔지만, 페이지 이동 시 다시 요청이 발생하는 모습이다. 이는 페이지 이동 시점에 이미 오래된 데이터로 간주되기 때문이다. 따라서 `useQuery`에 적절한 `staleTime`을 설정하여 프리패치가 효과를 발휘할 수 있도록 해야 한다.
+
+또한, 사전 요청된 쿼리는, 이를 사용하는 쿼리 인스턴스(`useQuery`)가 등장하지 않는다면 `inactive` 상태로 존재한다.
+
+![사진 5) inactive 상태](../images/react_query_advanced_patterns/inactive_prefetched_data.png)
+
+`inactive` 상태의 데이터는 `gcTime`이 지나면 캐시에서 제거되므로, `gcTime` 옵션을 통해 실제 사용 시점까지 데이터를 유지할 수 있게 조절할 수 있다.
+
+`staleTime`과 `gcTime`을 너무 길게 설정하면 캐시가 불필요하게 오래 유지되어 메모리를 낭비할 수 있다. 따라서 적절한 값을 설정하여 캐시를 효율적으로 관리하는 것이 중요하다.
+
+그 외에도 `useQuery`옵션을 대부분 사용할 수 있지만, `enabled`, `select` 등 일부 옵션은 적용되지 않는다. 적용되지 않는 옵션의 목록은 [공식 문서 - prefetchQuery](https://tanstack.com/query/v5/docs/reference/QueryClient#queryclientprefetchquery)에 나열되어 있다.
+
+react-query의 프리패치는 사용자의 행동을 예측하여 데이터를 미리 불러오고 캐시에 저장함으로써, 실제로 데이터가 필요할 때 즉시 사용할 수 있게 한다. 이를 적절히 활용한다면, 체감 속도를 크게 향상시켜 더 빠르고 부드러운 사용자 경험을 제공할 수 있다.
+
+다만, 모든 요청을 미리 불러오는 것은 리소스 낭비로 이어질 수 있다. 따라서 사용자의 행동을 신중하게 예측하고, 실제로 필요할 것으로 예상되는 데이터에 대해서만 프리패치를 적용하는 것이 바람직하다.
+
+프리패치는 링크 호버 외에도, 특정 작업을 수행할 것으로 예상되는 시점에 데이터를 미리 불러오는 등 다양한 상황에서 활용할 수 있다. react-query에서는 컴포넌트 구성에서 하위 컴포넌트와의 워터폴 현상을 완화하기 위한 용도로도 활용한다. [공식 문서 - Prefetching](https://tanstack.com/query/v5/docs/framework/react/guides/prefetching) 에서 자세한 내용을 확인할 수 있다.
 
 ### Optimistic update
 
