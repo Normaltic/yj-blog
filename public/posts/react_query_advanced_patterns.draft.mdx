@@ -540,23 +540,429 @@ react-query의 프리패치는 사용자의 행동을 예측하여 데이터를 
 
 ### Optimistic update
 
-사용자의 요청은 다양하게 일어날 수 있다. 댓글을 작성하거나, 좋아요 버튼을 누르거나, 게시글을 삭제하는 등의 작업이 있다.
+사용자의 요청은 다양하게 일어날 수 있다. 단순히 데이터를 가져오는게 아니라 댓글을 작성하거나, 좋아요 버튼을 누르거나, 게시글을 삭제하는 등의 작업이 있다. 이러한 작업은 일반적으로 서버에 요청을 보내고, 서버의 응답을 기다린 후 그 결과를 바탕으로 화면에 반영한다.
 
-이러한 작업은 서버에 요청을 보내고, 서버의 응답을 기다린 후에야 화면에 반영된다.
+하지만, 네트워크 환경이 좋지 않거나 서버의 응답이 지연되는 경우, 사용자는 즉각적인 반응을 보지 못한다. 이 때 사용자는 자신의 요청이 제대로 처리되었는지 불안해할 수 있다. 로딩 스피너나 스켈레톤 UI 등을 사용한다면 빠르게 피드백을 제공할 수 있지만, 결국 서버의 응답을 기다려야 한다는 점은 변함이 없다.
 
-그러나, 사용자의 네트워크 환경이 좋지 않거나 서버의 응답이 지연되는 경우, 사용자는 긴 대기 시간을 경험하게 된다.
+그래서 사용자에게 더 빠르고 부드러운 경험을 제공하기 위해, **낙관적 업데이트**(Optimistic Update)라는 패턴을 사용할 수 있다. 낙관적 업데이트란, 사용자의 요청이 성공할 것이라고 **가정**(Optimistic assumption) 하고, 서버의 응답을 기다리지 않고 즉시 화면에 반영하는 패턴이다.
 
-(투두 토글 예제)
+기본적으로, 동작에 대한 요청은 서버에 보내지고, 서버의 응답을 기다린 후 그 결과를 화면에 반영한다.
 
-이를 해결하기 위해 낙관적 업데이트라는 패턴을 사용할 수 있다.
+```text
+User Action -> Request to Server -> Wait for Response -> Update UI
+```
 
-낙관적 업데이트(Optimistic Update)란, 서버의 응답을 기다리지 않고, 사용자의 요청이 성공할 것이라고 가정하고, 즉시 화면에 반영하는 패턴이다.
+반면, 낙관적 업데이트는 다음과 같이 동작한다.
 
-서버 반영 전에 사용자가 변화를 인지할 수 있어, 더 빠르고 부드러운 사용자 경험을 제공할 수 있다.
+```text
+User Action -> Update UI -> Request to Server -> Wait for Response -> Confirm or Rollback
+```
 
-cancel → snapshot → setQueryData → rollback/commit
+사용자의 요청이 발생하면 서버의 응답을 기다리지 않고 예상되는 결과를 즉시 화면에 반영한다. 그리고 서버에 요청을 보내고, 서버의 응답이 도착하면 그 결과에 따라 화면을 유지하거나, 요청이 실패한 경우 이전 상태로 롤백한다.
 
-장점과 리스크
+이 방식은 사용자의 행동에 UI가 즉시 반응하도록 하여, **지연 없는 인터랙션을 제공**해 더 빠르고 부드러운 사용자 경험을 전달할 수 있다.
+
+#### Concept
+
+react-query 에서는 여러 기능을 조합하여 낙관적 업데이트를 구현할 수 있다.
+
+먼저, react-query는 서버에서 데이터를 가져와 캐시에 저장하고, 이를 화면에 반영하는 방식으로 동작한다. 그리고 `QueryClient`에서는 그 캐시를 직접 제어할 수 있도록 `getQueryData`와 `setQueryData` 메서드를 제공한다. `getQueryData`는 캐시된 데이터를 조회하는 데 사용하고, `setQueryData`는 캐시된 데이터를 직접 수정하는 데 사용한다.
+
+```ts
+const todos = queryClient.getQueryData(["todos"]);
+queryClient.setQueryData(["todos"], (oldData) => [...oldData, newTodo]);
+```
+
+`getQueryData` 메서드는 쿼리 키를 인자로 받아 해당 키에 캐시된 데이터를 반환한다. 이를 통해 현재 캐시된 데이터를 조회할 수 있다.
+
+`setQueryData` 메서드는 첫 번째 인자로 쿼리 키를 받고, 두 번째 인자로는 해당 쿼리에 대한 새로운 데이터, 혹은 이전 데이터를 인자로 전달 받고 새로운 데이터를 반환하는 함수를 받는다. 이 때, 반환하는 데이터는 불변성을 유지해야 한다. 따라서 데이터가 객체일 경우, 새로 생성하여 반환해야 한다.
+
+그래서 이 메서드들을 통해 캐시된 데이터를 조회하거나 직접 수정할 수 있으며, 캐시 데이터를 수정하면 react-query는 해당 데이터를 사용하는 모든 컴포넌트를 자동으로 리렌더링한다. 결과적으로, `setQueryData`를 사용하여 캐시된 데이터를 즉시 변경함으로써, 서버의 응답을 기다리지 않고도 화면에 변화를 반영할 수 있다.
+
+```ts
+const { mutate } = useMutation({
+  mutationFn: (newTodo) => addTodo(newTodo)
+});
+
+const handleAddTodo = (newTodo) => {
+  mutate(newTodo);
+  queryClient.setQueryData(["todos"], (oldData) => [...oldData, newTodo]);
+};
+```
+
+`mutate` 함수를 호출하여 서버에 새로운 투두를 추가하는 요청을 보내고, 동시에 `setQueryData`를 사용하여 캐시된 투두 목록에 새로운 투두를 즉시 추가한다. 그래서 서버의 응답을 기다리지 않고도 화면에 새로운 투두가 추가된 것처럼 보이게 된다.
+
+하지만, 단순히 캐시를 수정하는 것만으로는 부족하다. 이렇게 수정된 데이터는 어디까지나 "예상된 상태" 이기 때문에, 실제 결과와 다를 수 있다. 실제로 서버의 요청이 성공했는지 실패했는지에 따라, 화면을 유지하거나 이전 상태로 롤백하는 작업이 필요하다.
+
+이 때, `useMutation` 훅의 콜백을 활용할 수 있다. `useMutation` 훅은 여러 콜백을 제공하여 요청의 상태에 따라 후속 작업을 수행할 수 있다. 이 콜백들을 활용한다면 낙관적 업데이트의 흐름을 구성할 수 있다.
+
+- `onMutate`: 뮤테이션이 시작되기 전에 호출되며, 캐시된 데이터를 미리 수정하고 이전 상태를 스냅샷으로 저장한다.
+- `onError`: 뮤테이션이 실패했을 때 호출되며, 이전 상태로 롤백한다.
+- `onSettled`: 뮤테이션이 성공하거나 실패한 후에 호출되며, 필요한 후속 작업을 수행한다.
+
+`onMutate` 콜백은 뮤테이션이 시작되기 전에 호출된다. 이 콜백에서는 사용자가 요청을 보낸 시점에, 예상되는 결과를 바탕으로 캐시된 데이터를 즉시 수정한다. 또한, `onMutate`에서 반환된 값은 다른 콜백에 `context` 인자로 전달된다. 그래서 이를 활용한다면, 캐시 데이터를 바꾸기 전에 이전 상태를 스냅샷으로 저장하고 반환하여, 이후에 롤백할 때 사용할 수 있다.
+
+```ts
+const onMutate = (newTodo) => {
+  const previousTodos = queryClient.getQueryData(["todos"]);
+
+  queryClient.setQueryData(["todos"], (oldData) => [...oldData, newTodo]);
+
+  return { previousTodos };
+};
+```
+
+`getQueryData` 메서드를 사용하여 현재 캐시된 투두 목록을 조회하고, 이를 `previousTodos` 변수에 저장한다. 그리고 `setQueryData` 메서드를 사용하여 캐시된 투두 목록에 새로운 투두를 즉시 추가한다. 마지막으로, 이전 상태인 `previousTodos`를 객체로 반환한다.
+
+`onError` 콜백은 뮤테이션이 실패했을 때 호출되며, 에러가 발생했을 때 캐시를 이전 상태로 롤백하는 작업을 수행한다.
+
+```ts
+const onError = (error, newTodo, context) => {
+  if (context?.previousTodos) {
+    queryClient.setQueryData(["todos"], context.previousTodos);
+  }
+};
+```
+
+`onMutate`에서 반환된 `context` 인자를 활용하여, 이전 상태인 `previousTodos`를 조회한다. 그리고 `setQueryData` 메서드를 사용하여 캐시된 투두 목록을 이전 상태로 롤백한다.
+
+마지막으로 `onSettled` 콜백은 뮤테이션이 성공하거나 실패한 후에 호출된다. 이 콜백에서는 최종적으로 서버의 데이터와 캐시된 데이터를 동기화하는 작업을 수행한다.
+
+```ts
+const onSettled = () => {
+  queryClient.invalidateQueries({ queryKey: ["todos"] });
+};
+```
+
+`invalidateQueries` 메서드를 사용하여 `["todos"]` 쿼리를 무효화한다. 그래서 이 쿼리를 사용하는 모든 컴포넌트는 다시 데이터를 요청하게 된다. 이를 통해 서버의 데이터와 캐시된 데이터를 동기화할 수 있다.
+
+그래서 `useMutation` 훅의 세 콜백을 조합하면 다음과 같은 뮤테이션을 선언할 수 있다.
+
+```ts
+const { mutate } = useMutation({
+  mutationFn: (newTodo) => addTodo(newTodo),
+  onMutate: (newTodo) => {
+    const previousTodos = queryClient.getQueryData(["todos"]);
+
+    queryClient.setQueryData(["todos"], (oldData) => [...oldData, newTodo]);
+
+    return { previousTodos };
+  },
+  onError: (error, newTodo, context) => {
+    if (context?.previousTodos) {
+      queryClient.setQueryData(["todos"], context.previousTodos);
+    }
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+  }
+});
+```
+
+이를 통해 서버의 응답을 기다리지 않고도 즉시 UI를 갱신하면서, 실패 시 이전 상태로 롤백하고, 최종적으로 서버와 데이터를 동기화하는 낙관적 업데이트 패턴을 구현할 수 있다.
+
+다만, 앞서 구현한 내용만으로는 상태 불일치 문제가 발생할 여지가 있다. 예를 들어, 사용자가 기능을 연속적으로 수행할 때, 두 요청의 쿼리 데이터 설정과 무효화가 충돌할 수 있다. 이 경우 추가적인 처리가 필요하다.
+
+이제 낙관적 업데이트를 실제로 구현해 보면서 더 자세히 살펴보자.
+
+#### Implementation
+
+Todo를 관리하는 앱이 있다. 이 앱은 투두 목록을 불러와 카드 형식으로 보여주며, 카드를 클릭하면 상세 페이지에 진입할 수 있다. 투두는 제목과 내용, 완료 여부를 가지고, 투두 상세 페이지에서 투두의 완료 여부를 토글할 수 있다.
+
+그래서 특정 투두를 조회해 화면을 그리고, 완료 여부를 토글하는 기능이 상세 페이지에 구현되어 있다.
+
+```tsx
+const { data: todo } = useQuery({
+  queryKey: ["todo", id],
+  queryFn: () => getTodo(id),
+  enabled: !!id
+});
+
+const { mutate: updateDone, isUpdatePending } = useMutation({
+  mutationFn: (done: boolean) => updateTodoDone({ id, done }),
+  onSuccess: () => {
+    queryClient.invalidateQueries({ queryKey: ["todo", id] });
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+  }
+});
+
+...
+
+return (
+  <div>
+    ...
+    <ToggleSwitch
+      label={todo.done ? "Done" : "Todo"}
+      checked={todo.done}
+      onChange={() => updateDone(!todo.done)}
+      disabled={isUpdatePending}
+    />
+    ...
+  </div>
+);
+```
+
+`useQuery` 훅을 사용하여 `["todo", id]` 쿼리를 선언하여 투두를 가져오고, 그 데이터를 화면에 출력한다. 그리고 화면에는 완료 여부를 토글하는 스위치가 있다.
+
+토글 스위치를 클릭하면 `updateDone` 함수가 호출되어, 서버에 완료 여부를 변경하는 요청을 보낸다. 요청이 진행 중일 때는 스위치를 비활성화한다. 그리고 요청이 성공하면 `["todo", id]`와 `["todos"]` 쿼리를 무효화하여, 상세 페이지와 투두 목록 페이지의 데이터를 더 이상 신선하지 않은 상태로 만든다. 그래서 이 쿼리를 사용하는 경우 다시 데이터를 요청하여 최신 상태를 유지하도록 한다.
+
+구현된 토글 기능은 다음과 같이 동작한다.
+
+![사진 6) 토글 버튼을 통한 사용자 인터랙션](../images/react_query_advanced_patterns/toggle_done_normally.gif)
+
+요청이 처리되는 동안 스위치가 비활성화되기 때문에, 사용자는 요청이 처리 중임을 인지할 수 있다. 이는 일반적으로 간단하게 구현하는 방식으로, 사용자에게 로딩의 피드백을 전달하고 중복 요청을 방지할 수 있다.
+
+그러나, 사용자 경험 측면에서는 다소 아쉬운 부분이 있다. 사용자는 인터랙션하는 즉시 반영되기를 바라지만, 요청이 처리되는 동안 로딩 상태를 기다려야 하며, 요청이 완료된 후에야 화면이 갱신된다. 이로 인해 사용자는 지연을 느낄 수 있으며, 네트워크 환경이 좋지 않거나 요청이 오래 걸리는 경우에는 그 체감이 더욱 커질 수 있다.
+
+이 방식은 즉각적인 피드백을 제공하지 못한다. UI는 사용자 행동의 결과가 즉시 반영되지 않으며, 결국 인터렉션이 무겁고 느리게 느껴질 수 있다.
+
+이제 낙관적 업데이트 패턴을 적용하여, 사용자의 인터랙션에 즉각적으로 반응하는 더 빠르고 부드러운 경험을 제공해 보자.
+
+```ts
+const { mutate: updateDone } = useMutation({
+  mutationFn: (done: boolean) => updateTodoDone({ id, done }),
+  onMutate: (done: boolean) => {
+    const previousTodo = queryClient.getQueryData<Todo>(["todo", id]);
+
+    if (previousTodo) {
+      queryClient.setQueryData<Todo>(["todo", id], {
+        ...previousTodo,
+        done
+      });
+    }
+
+    queryClient.setQueryData<Todo[]>(["todos"], (old) =>
+      old?.map((todo) => (todo.id === id ? { ...todo, done } : todo))
+    );
+
+    return { previousTodo };
+  },
+  onError: (err, _, context) => {
+    const previousTodo = context?.previousTodo;
+    if (previousTodo) {
+      queryClient.setQueryData(["todo", id], previousTodo);
+      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
+        old?.map((todo) => (todo?.id === id ? previousTodo : todo))
+      );
+    }
+    console.error("Failed to update todo:", err);
+  },
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+    queryClient.invalidateQueries({ queryKey: ["todo", id] });
+  }
+});
+```
+
+뮤테이션이 실행되는 시점에 `getQueryData` 메서드를 사용하여 현재 캐시된 투두 데이터를 조회하고, 이를 저장한다. 그리고 `setQueryData` 메서드를 사용하여 해당 투두의 완료 여부를 즉시 변경한다. 또한, 투두 목록인 `["todos"]` 쿼리의 캐시도 함께 수정하여, 목록에서도 완료 여부가 즉시 반영되도록 한다. 마지막으로, 이전 상태인 `previousTodo`를 객체로 반환한다.
+
+에러가 발생했을 때에는 이전 상태로 롤백하는 작업을 수행해야 한다. `onError` 콜백에서 `context` 인자를 참조하여 이전 상태인 `previousTodo`를 조회한다. 그리고 `setQueryData` 메서드를 사용하여 상세 페이지와 투두 목록의 캐시를 이전 상태로 롤백한다.
+
+뮤테이션이 완료되면 `onSettled` 콜백을 통해 `invalidateQueries` 메서드를 사용하여 `["todos"]`와 `["todo", id]` 쿼리를 무효화한다. 그래서 이 쿼리를 사용하는 모든 컴포넌트는 다시 데이터를 요청하게 된다.
+
+마지막으로, 토글 스위치의 `disabled` 속성을 제거하여, 로딩 표현을 제거한다.
+
+이렇게 구현한 낙관적 업데이트는, 이제 사용자의 인터랙션에 즉각적으로 반응한다.
+
+![사진 7) 낙관적 업데이트를 적용한 투두 버튼](../images/react_query_advanced_patterns/toggle_done_optimistically.gif)
+
+이정도만 구현해도 사용자 경험이 크게 향상된다. 요청이 완료되기를 기다리지 않고도 사용자의 행동에 즉시 화면이 반응하며, 지연 없는 인터랙션을 경험할 수 있다.
+
+#### Inconsistency timing
+
+다만, 이 구현에는 문제가 있다. 먼저, 해당 뮤테이션이 실행될 때, 관련한 쿼리가 실행되고 있었다면, **낙관적 업데이트된 상태가 무효화** 될 수 있다.
+
+예를 들어, 상세 페이지에서 투두를 조회하는 쿼리에 `refetchOnWindowFocus` 옵션이 활성화되어 있다고 하자.
+
+```ts
+const { data: todo } = useQuery({
+  ...
+  staleTime: 1000 * 60, // 1 minute
+  refetchOnWindowFocus: true
+});
+```
+
+이 옵션은 쿼리의 갱신 타이밍을 제어하는 옵션으로, 앱에 포커스가 돌아올 때 `stale` 상태인 쿼리를 자동으로 다시 요청한다. 그래서 이 쿼리는 실행한지 1분이 지나면 `stale` 상태가 되고, 다른 탭에서 이 탭으로 돌아올 때 자동으로 다시 데이터를 요청한다.
+
+이 때, 해당 쿼리가 실행되는 도중에 완료 여부를 토글하는 뮤테이션이 실행된다면, 앞선 쿼리가 완료될 때 낙관적 업데이트가 무효화되며 데이터의 불일치가 발생한다.
+
+![사진 8) 불일치 타이밍 다이어그램](../images/react_query_advanced_patterns/inconsistency_timing_of_render_diagram.png)
+
+다른 탭에서 포커스가 돌아와 쿼리가 실행된다. 쿼리 실행 도중, 클릭 이벤트로 인해 뮤테이션이 실행되어 낙관적 업데이트가 반영되었다. 그러나 이전 쿼리가 완료된 후에 그 결과가 캐시에 반영되며 이전 상태로 롤백된다. 이후, 다시 쿼리를 무효화해 데이터를 동기화하며 다시 최신 상태가 된다.
+
+![사진 9) 투두 상태의 불일치 및 롤백 현상](../images/react_query_advanced_patterns/inconsistency_of_todo_toggle.gif)
+
+그래서 버튼을 클릭했을 때, 화면은 낙관적 업데이트로 한 번 바뀌고, 이전 쿼리에 의해서 이전 상태로 롤백되며, 쿼리 무효화에 의해 다시 한 번 바뀌게 된다. 그리고 이 과정에서 사용자는 상태가 앞뒤로 전환되는 불편한 경험을 하게 된다.
+
+따라서, 뮤테이션이 실행되는 시점에 이미 실행중인 이전 쿼리를 취소하여, 낙관적 업데이트를 한 데이터가 덮어씌워지는 상황을 방지해야 한다.
+
+```ts
+useMutation({
+  ...
+  onMutate: async (done: boolean) => {
+    await queryClient.cancelQueries({ queryKey: ["todo", id] });
+    ...
+  },
+  ...
+});
+```
+
+뮤테이션을 실행하는 시점에 `cancelQueries` 메서드를 사용하여 `["todo", id]` 쿼리를 취소하도록 한다. 그래서 이전 쿼리가 완료되어 캐시에 반영되는 상황을 방지한다.
+
+![사진 10) 뮤테이션 실행과 쿼리 취소 다이어그램](../images/react_query_advanced_patterns/cancel_previous_query_on_update_diagram.png)
+
+그래서 클릭하는 즉시 진행중인 쿼리를 취소하고, 낙관적 업데이트가 반영된다. 이후, 뮤테이션이 완료되면 쿼리를 무효화하여 서버의 데이터와 동기화한다. 이렇게 하면, 쿼리가 실행되고 있는 상황에서 낙관적 업데이트가 무효화되는 문제를 방지할 수 있다.
+
+하지만, 쿼리 취소가 모든 상황을 해결해 주지는 않는다.
+
+#### Multiple Mutation
+
+즉각적인 반응을 제공하기 위해 토글 버튼에 `disabled` 속성을 제거했다. 그 결과, 이전 요청이 진행되는 도중에도 사용자는 토글 버튼을 계속 클릭할 수 있게 되었고, 여러 개의 뮤테이션이 연속해서 실행될 수 있는 상황이 되었다.
+
+사용자가 Todo 상태를 완료로 변경한 직후, 빠르게 다시 미완료로 바꾸는 상황을 가정해보자. 이 때, 앞 뮤테이션이 완료되기 전에 뒤 뮤테이션이 실행된다면, 낙관적 업데이트가 또다시 무효화 될 수 있다.
+
+![사진 11) 연속된 뮤테이션과 낙관적 업데이트 다이어그램](../images/react_query_advanced_patterns/multiple_mutation_with_optimistic_update_diagram.png)
+
+이전에는 뮤테이션이 실행될 때 `cancelQueries` 메서드를 사용하여 이전 쿼리를 취소하도록 작업했고, 쿼리가 진행중인 상황에서는 문제를 해결할 수 있었다. 그러나 쿼리는 뮤테이션이 완료되고 난 뒤에야 무효화되어 재실행되기 때문에, 앞 뮤테이션이 완료되기 전에 다음 뮤테이션이 바로 실행된다면, 그 시점에는 취소할 쿼리가 없다.
+
+또한, 두 번째 뮤테이션이 첫 번째 뮤테이션에 의한 재요청 쿼리보다 늦게 완료될 경우, 역시 이미 쿼리가 완료되었기 때문에 취소할 쿼리가 없다.
+
+따라서, 앞 뮤테이션이 완료된 이후에는 정상적으로 쿼리가 무효화되고 다시 실행되며, 그 결과가 캐시에 반영된다. 그래서 뒤 뮤테이션에서 적용된 낙관적 업데이트가 또 다시 덮어씌워진다.
+
+![사진 12) 투두 상태의 불일치 및 롤백 현상 2](../images/react_query_advanced_patterns/multiple_todo_toggle_with_optimistic_update.gif)
+
+그래서 빠르게 두 번 누르는 경우, 낙관적 업데이트들은 즉시 반영되고, 이후에 앞 뮤테이션이 완료되며 무효화한 쿼리로 인해 이전 상태로 롤백되며, 다시 뒤 뮤테이션이 완료되면서 최신 상태가 된다. 그래서 UI가 앞뒤로 전환되는 불일치 증상이 다시 발생한다.
+
+이 문제는 과도한 `invalidateQueries` 호출로 인해 발생한다.
+
+```ts
+useMutation({
+  ...
+  onSettled: () => {
+    queryClient.invalidateQueries({ queryKey: ["todos"] });
+    queryClient.invalidateQueries({ queryKey: ["todo", id] });
+  }
+});
+```
+
+뮤테이션이 완료될 때 `onSettled` 콜백에서 쿼리를 무효화하고 있다. 그러나, 두 번째 뮤테이션이 실행되는 시점에서는, 첫 번째 뮤테이션이 완료될 때의 무효화는 필요가 없다. 이미 낙관적 업데이트 때문에 다음 상태로 업데이트 되었으며, 이후에 두 번째 뮤테이션이 완료될 때 무효화하면 충분하다. 하지만, `onSettled` 콜백은 뮤테이션이 성공하든 실패하든 항상 호출된다. 그래서 불필요한 시점에도 쿼리 무효화가 작동하여 낙관적 업데이트가 덮어씌워지는 상황이 발생하는 것이다.
+
+이를 해결하기 위해서는, `onSettled` 콜백에서 쿼리 무효화를 조금 더 똑똑하게 처리해야 한다. 앞 뮤테이션이 완료될 때는 쿼리를 무효화하지 않고, 뒤 뮤테이션이 완료될 때만 쿼리를 무효화하도록 해야 한다. 다행히 생각보다 간단하게 처리할 수 있다.
+
+```ts
+const mutationCount = queryClient.isMutating();
+```
+
+`QueryClient`는 `isMutating` 메서드를 제공한다. 이 메서드는 현재 진행중인 뮤테이션의 개수를 반환한다. 이를 활용하여, `onSettled` 콜백에서 쿼리를 무효화하기 전에, 진행중인 뮤테이션이 더 이상 없는지 확인할 수 있다.
+
+```ts
+useMutation({
+  ...
+  onSettled: () => {
+    const mutationCount = queryClient.isMutating();
+    if (mutationCount === 1) {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todo", id] });
+    }
+  }
+});
+```
+
+`isMutating` 메서드를 사용하여 현재 진행중인 메서드의 개수를 조회한다. `onSettled` 콜백이 호출되는 시점에는 해당하는 뮤테이션이 아직 "실행 중" 상태이기 때문에, 이 값이 `1`인 경우에만 쿼리를 무효화하도록 한다.
+
+하지만, 현재는 확인하는 범위가 너무 넓다. `isMutating` 메서드는 모든 뮤테이션을 대상으로 개수를 반환하기 때문에, 현재 뮤테이션과는 다른 종류의 뮤테이션이 있다면 이 값이 `1`보다 커질 수 있다. 따라서, 이 메서드에 필터링 옵션을 전달하여, 특정 쿼리 키에 해당하는 뮤테이션만 개수를 세도록 해야 한다.
+
+```ts
+useMutation({
+  ...
+  mutationKey: ["todo", "updateDone", id],
+  onSettled: () => {
+    const mutationCount = queryClient.isMutating({
+      mutationKey: ["todo", "updateDone", id]
+    });
+    if (mutationCount === 1) {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todo", id] });
+    }
+  }
+});
+```
+
+`isMutating` 메서드는 `mutationKey` 옵션을 통해 특정 쿼리를 대상으로 개수를 셀 수 있다. 그래서 뮤테이션을 선언할 때 `mutationKey` 옵션을 설정하고, `isMutating` 메서드에도 동일한 키를 전달하여, 해당 뮤테이션만 개수를 세도록 한다.
+
+이제 쿼리를 무효화 하기 전에 진행중인 뮤테이션의 개수를 확인하고, 더 이상 실행중인 뮤테이션이 없는 경우(자신을 제외하고)에만 쿼리를 무효화하게 된다.
+
+![사진 13) 조건부 무효화 다이어그램](../images/react_query_advanced_patterns/conditional_invalidating_diagram.png)
+
+첫 번째 쿼리가 완료될 때, 진행중인 뮤테이션이 있기 때문에 쿼리 무효화를 건너뛴다. 이후, 두 번째 뮤테이션이 완료될 때, 더 이상 진행중인 뮤테이션이 없기 때문에 쿼리를 무효화한다. 그래서 낙관적 업데이트가 덮어씌워지는 상황을 방지할 수 있다.
+
+#### 정리
+
+지금까지 낙관적 업데이트에 대한 구현 방향성과 함께, 주의할 점들을 살펴보았다. 단순히 캐시를 수정하는 것만으로는 부족하며, 여러 상황에서 발생할 수 있는 문제들을 고려하여 적절히 대응해야 한다.
+
+이제까지 살펴본 내용을 종합하면 다음과 같다.
+
+```ts
+const { mutate: updateDone } = useMutation({
+  mutationKey: ["todo", "updateDone", id], // 특정 뮤테이션을 식별하기 위한 키
+  mutationFn: (done: boolean) => updateTodoDone({ id, done }),
+  onMutate: async (done) => {
+    // 진행중인 쿼리를 취소하여 낙관적 업데이트가 무효화되는 상황 방지
+    await queryClient.cancelQueries({ queryKey: ["todos"] });
+    await queryClient.cancelQueries({ queryKey: ["todo", id] });
+
+    // 이전 상태를 스냅샷으로 저장
+    const previousTodo = queryClient.getQueryData<Todo>(["todo", id]);
+
+    if (previousTodo) {
+      // 낙관적 업데이트 적용
+      queryClient.setQueryData<Todo>(["todo", id], {
+        ...previousTodo,
+        done
+      });
+    }
+    // 낙관적 업데이트 적용
+    queryClient.setQueryData<Todo[]>(["todos"], (old) =>
+      old?.map((todo) => (todo.id === id ? { ...todo, done } : todo))
+    );
+
+    // 다른 콜백에서 사용하기 위해 이전 상태를 반환
+    return { previousTodo };
+  },
+  onError: (err, _, context) => {
+    const previousTodo = context?.previousTodo;
+    if (previousTodo) {
+      // 에러 발생 시 이전 상태로 롤백
+      queryClient.setQueryData(["todo", id], previousTodo);
+      queryClient.setQueryData<Todo[]>(["todos"], (old) =>
+        old?.map((todo) => (todo?.id === id ? previousTodo : todo))
+      );
+    }
+    console.error("Failed to update todo:", err);
+  },
+  onSettled: () => {
+    // 뮤테이션이 더 이상 진행중이지 않은지 확인
+    // 이 때, onSettled 콜백이 호출되는 시점에는 해당 뮤테이션이 아직 "실행 중" 상태
+    // 따라서 자신을 제외한 다른 뮤테이션이 없다면 쿼리 무효화
+    if (
+      queryClient.isMutating({ mutationKey: ["todo", "updateDone", id] }) === 1
+    ) {
+      queryClient.invalidateQueries({ queryKey: ["todos"] });
+      queryClient.invalidateQueries({ queryKey: ["todo", id] });
+    }
+  }
+});
+```
+
+낙관적 업데이트는 사용자에게 즉각적인 반응을 제공하여, 더 빠르고 부드러운 경험을 전달할 수 있다. 사용자의 행동과 반응 사이의 지연이 사라지게 되어 직관적인 인터렉션을 제공할 수 있게 되며, 특히, 네트워크 속도가 느린 상황에서는 그 효과가 더욱 크다.
+
+다만, 낙관적 업데이트는 "요청이 성공할 것"이라는 전제를 기반으로 한다. 그래서 요청이 실패할 경우 이전 상태로 롤백해야 하는데, 순간적인 깜빡임을 느낄 수 있다. 또한, 비교적 가벼운 작업에는 적합하나, 복잡한 작업에는 신중히 적용해야 한다. 사용자가 폼을 제출하는 상황 같은 경우에는 입력값 검증 등 여러 작업이 필요하기 때문에, 화면을 덮고 스피너를 표출하는 피드백이 더욱 적합할 수 있다.
+
+그리고 코멘트 남기기 등 여러 사용자가 동시에 수정하는 환경에서는 오히려 헷갈리게 만들 수 있다. 낙관적 업데이트로 사용자의 코멘트가 즉시 등록되지만, 그 사이 다른 사용자가 코멘트를 남겼을 경우, 쿼리가 갱신되며 다시 한 번 UI가 변경된다. 이 경우 낙관적 업데이트와 실제 쿼리 갱신 사이에 UI 레벨에서 구분하여 UX에 신경써야 한다.
+
+결국 낙관적 업데이트는 사용자 경험을 개선하기 위한 좋은 전략이지만, 모든 상황에 적합한 것은 아니다. 요청에 성격을 고려하여 신중하게 적용해야 하며, 적용할 때에는 사용자가 혼란을 느끼지 않도록 실패의 피드백이나 롤백 과정을 명확히 설계해야 한다.
+
+이 균형을 잘 맞추고 적절히 사용한다면, 낙관적 업데이트는 사용자 경험을 크게 향상시키는 강력한 도구가 될 수 있다.
 
 ### Infinite Scroll
 
@@ -642,4 +1048,5 @@ React Query는 “서버 상태 제어 도구”라는 메시지 강화
 
 ### 참고
 
+- [Concurrent Optimistic Updates in React Query](https://tkdodo.eu/blog/concurrent-optimistic-updates-in-react-query)
 - [[ TanStack Query ] TanStack Query로 Infinite scroll 기능 구현하기](https://programmerplum.tistory.com/205)
